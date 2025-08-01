@@ -1,0 +1,49 @@
+name: CI/CD – Backend
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-push-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. チェックアウト
+      - uses: actions/checkout@v4
+
+      # 2. AWS / ECR 認証
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+       # 3. タグ生成（コミットハッシュ 7 桁）
+      - name: Set image tag
+        id: version
+        run: echo "TAG=$(git rev-parse --short=7 HEAD)" >> $GITHUB_ENV
+
+      # 4. ビルド & Push & Helm values 更新
+      - name: Build & Push backend, update values.yaml
+        env:
+          ECR_REPO: 635566485987.dkr.ecr.ap-northeast-1.amazonaws.com/springboot-api
+          TAG: ${{ env.TAG }}
+        run: |
+          cd backend
+          docker build -t $ECR_REPO:$TAG .
+          docker push $ECR_REPO:$TAG
+          sed -i "s/^  tag: .*/  tag: ${TAG}/" helm-chart/values.yaml
+          cd ..
+          
+      # 5. 変更があればコミット & プッシュ（skip ループ防止付き）
+      - name: Commit and push updated Helm values.yaml
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/helm-chart/values.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update backend image tag [skip ci]"
+          git push origin main

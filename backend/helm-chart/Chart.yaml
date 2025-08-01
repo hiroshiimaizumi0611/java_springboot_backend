@@ -1,0 +1,6 @@
+apiVersion: v2
+name: backend
+description: Spring Boot API
+type: application
+version: 0.1.0      # チャートのバージョン
+appVersion: "1.0.0" # アプリのバージョン(任意)
