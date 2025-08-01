@@ -1,1 +1,1 @@
-https://github.com/hiroshiimaizumi0611/java_springboot_backend.git
+java_springboot_backend
