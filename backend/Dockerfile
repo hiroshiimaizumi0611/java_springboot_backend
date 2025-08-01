@@ -12,7 +12,6 @@ ENV PATH="$JAVA_HOME/bin:$PATH"
 
 WORKDIR /app
 
-# Gradle wrapper がプロジェクトに含まれている前提
 COPY . .
 RUN ./gradlew bootJar
 

@@ -10,7 +10,7 @@ WHENEVER SQLERROR EXIT 1
 
 ALTER SESSION SET CONTAINER = MOOPPDB1;
 
-/* 表領域（フルパスで .dbf を指定） */
+/* 表領域 */
 CREATE TABLESPACE app_data
   DATAFILE '/opt/oracle/oradata/app_data01.dbf'
   SIZE 100M AUTOEXTEND ON NEXT 50M MAXSIZE 2G;
@@ -51,7 +51,7 @@ CONNECT app_owner/OwnerPwd!@&PDB_CONN
 /* シーケンス */
 CREATE SEQUENCE estimate_seq START WITH 1 NOCACHE;
 
-/* テーブル */
+/* サンプルテーブル */
 CREATE TABLE estimate (
   id            VARCHAR2(36)  PRIMARY KEY,
   title         VARCHAR2(255) NOT NULL,

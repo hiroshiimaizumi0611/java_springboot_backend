@@ -11,9 +11,8 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ProblemDetail handleAllExceptions(Exception ex) {
-    System.out.println("---- handleAllExceptions called ----");
     ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-    pd.setTitle("サーバエラー");
+    pd.setTitle("server error");
     pd.setDetail(ex.getMessage());
     pd.setType(URI.create("about:blank"));
     return pd;
@@ -21,9 +20,8 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(UserNotFoundException.class)
   public ProblemDetail handleUserNotFound(UserNotFoundException ex) {
-    System.out.println("---- handleUserNotFound called ----");
     ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
-    pd.setTitle("ユーザーが見つかりません");
+    pd.setTitle("ユーザーが見つかりません。");
     pd.setDetail(ex.getMessage());
     pd.setType(URI.create("/problem/user-not-found"));
     return pd;

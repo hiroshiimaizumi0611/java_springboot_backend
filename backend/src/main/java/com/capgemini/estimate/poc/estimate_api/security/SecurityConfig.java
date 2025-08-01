@@ -20,7 +20,6 @@ public class SecurityConfig {
   @Bean
   SecurityFilterChain filterchain(HttpSecurity http) throws Exception {
     return http
-        // .cors(Customizer.withDefaults())
         .csrf(csrf -> csrf.disable())
         .formLogin(formLogin -> formLogin.disable())
         .authorizeHttpRequests(
@@ -32,18 +31,6 @@ public class SecurityConfig {
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
-
-  // @Bean
-  // public CorsConfigurationSource corsConfigurationSource() {
-  //   CorsConfiguration configuration = new CorsConfiguration();
-  //   configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-  //   configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
-  //   configuration.setAllowedHeaders(Arrays.asList("*"));
-  //   configuration.setAllowCredentials(true);
-  //   UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-  //   source.registerCorsConfiguration("/**", configuration);
-  //   return source;
-  // }
 
   @Bean
   public AuthenticationManager authenticationManager(
