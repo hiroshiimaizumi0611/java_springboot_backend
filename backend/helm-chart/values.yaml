@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: 635566485987.dkr.ecr.ap-northeast-1.amazonaws.com/springboot-api
-  tag: 643cc9f
+  tag: 1f11023
   pullPolicy: IfNotPresent
 
 service:
