@@ -1,7 +1,7 @@
 # Backend
 
 Java + SpringBoot 製 API。
-**Docker Compose で瞬時に立ち上げられる** よう最小構成にしてあります。
+**Docker Compose** で立ち上げられるようにしてあります。
 
 ---
 
