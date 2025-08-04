@@ -8,13 +8,13 @@ Java + SpringBoot 製 API。
 ## ⚡ 使い方
 
 ```bash
-# ① 環境変数サンプルをコピーし
+# ① 環境変数サンプルをコピー
 cp .env.example .env
 
-# ② バックエンドリポジトリClone後にバックエンドを起動（まだの場合）
+# ②  バックエンドを起動
 docker compose up -d
 
-# ③ フロントエンドを起動
+# ③ フロントエンドリポジトリClone後にを起動
 docker compose up -d # 👉 http://localhost:3000 へアクセス
 
 # ④ サンプルユーザーでログイン
