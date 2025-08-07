@@ -9,7 +9,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
-
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Duration;
@@ -98,15 +97,19 @@ public class AuthController {
 
   @Value("${CLIENT_ID}")
   private String clientId;
+
   @Value("${CLIENT_SECRET}")
   private String clientSecret;
+
   @Value("${REDIRECT_URI}")
   private String redirectUri;
+
   @Value("${COGNITO_DOMAIN}")
   private String cognitoDomain;
 
   @PostMapping("/callback")
-  public ResponseEntity<LoginResponse> callback(@RequestBody Map<String, String> body) throws ParseException {
+  public ResponseEntity<LoginResponse> callback(@RequestBody Map<String, String> body)
+      throws ParseException {
     String code = body.get("code");
 
     MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
@@ -135,7 +138,8 @@ public class AuthController {
   private Tokens postForTokens(MultiValueMap<String, String> form, HttpHeaders h) {
     HttpEntity<MultiValueMap<String, String>> req = new HttpEntity<>(form, h);
     var restTemplate = new RestTemplate();
-    return Objects.requireNonNull(restTemplate.postForObject(cognitoDomain + "/oauth2/token", req, Tokens.class));
+    return Objects.requireNonNull(
+        restTemplate.postForObject(cognitoDomain + "/oauth2/token", req, Tokens.class));
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

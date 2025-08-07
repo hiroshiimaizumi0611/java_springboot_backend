@@ -7,7 +7,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
@@ -17,63 +16,62 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LoggingConfiguration implements InitializingBean {
 
-    @Value("${app.log.level:INFO}")
-    private String rootLevel;
+  @Value("${app.log.level:INFO}")
+  private String rootLevel;
 
-    @Override
-    public void afterPropertiesSet() {
-        LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-        
-        ctx.reset();
+  @Override
+  public void afterPropertiesSet() {
+    LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
 
-        PatternLayoutEncoder encoder = new PatternLayoutEncoder();
-        encoder.setContext(ctx);
-        encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%logger] %msg%n");
-        encoder.start();
+    ctx.reset();
 
-        ConsoleAppender<ILoggingEvent> console = new ConsoleAppender<>();
-        console.setContext(ctx);
-        console.setEncoder(encoder);
+    PatternLayoutEncoder encoder = new PatternLayoutEncoder();
+    encoder.setContext(ctx);
+    encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%logger] %msg%n");
+    encoder.start();
 
-        console.addFilter(healthCheckFilter());
-        
-        console.start();
+    ConsoleAppender<ILoggingEvent> console = new ConsoleAppender<>();
+    console.setContext(ctx);
+    console.setEncoder(encoder);
 
-        ch.qos.logback.classic.Logger root = ctx.getLogger(Logger.ROOT_LOGGER_NAME);
+    console.addFilter(healthCheckFilter());
 
-        root.setLevel(Level.toLevel(rootLevel));
-        root.addAppender(console);
+    console.start();
 
-        setPackageLevel(ctx, "com.zaxxer.hikari", Level.WARN);
-        setPackageLevel(ctx, "org.springframework.jdbc", Level.WARN);
-        setPackageLevel(ctx, "org.springframework.transaction", Level.WARN);
-        setPackageLevel(ctx, "org.springframework.web", Level.INFO);
+    ch.qos.logback.classic.Logger root = ctx.getLogger(Logger.ROOT_LOGGER_NAME);
 
-        log.info("Custom Logback configuration (EKS / ContainerInsights) initialized.");
-    }
+    root.setLevel(Level.toLevel(rootLevel));
+    root.addAppender(console);
 
-    private Filter<ILoggingEvent> healthCheckFilter() {
-        return new Filter<>() {
-            @Override
-            public FilterReply decide(ILoggingEvent ev) {
-                String msg = ev.getFormattedMessage();
-                
-                if (msg != null && (
-                        msg.contains("HEALTH_CHECK") ||
-                        msg.contains("GET /actuator/health") ||
-                        msg.contains("SELECT 1")
-                )) {
-                    return FilterReply.DENY;
-                }
-                return FilterReply.NEUTRAL;
-            }
-        };
-    }
+    setPackageLevel(ctx, "com.zaxxer.hikari", Level.WARN);
+    setPackageLevel(ctx, "org.springframework.jdbc", Level.WARN);
+    setPackageLevel(ctx, "org.springframework.transaction", Level.WARN);
+    setPackageLevel(ctx, "org.springframework.web", Level.INFO);
 
-    private void setPackageLevel(LoggerContext ctx, String pkg, Level level) {
-        ch.qos.logback.classic.Logger l = ctx.getLogger(pkg);
-        l.setLevel(level);
-    }
+    log.info("Custom Logback configuration (EKS / ContainerInsights) initialized.");
+  }
 
-    private static final Logger log = LoggerFactory.getLogger(LoggingConfiguration.class);
+  private Filter<ILoggingEvent> healthCheckFilter() {
+    return new Filter<>() {
+      @Override
+      public FilterReply decide(ILoggingEvent ev) {
+        String msg = ev.getFormattedMessage();
+
+        if (msg != null
+            && (msg.contains("HEALTH_CHECK")
+                || msg.contains("GET /actuator/health")
+                || msg.contains("SELECT 1"))) {
+          return FilterReply.DENY;
+        }
+        return FilterReply.NEUTRAL;
+      }
+    };
+  }
+
+  private void setPackageLevel(LoggerContext ctx, String pkg, Level level) {
+    ch.qos.logback.classic.Logger l = ctx.getLogger(pkg);
+    l.setLevel(level);
+  }
+
+  private static final Logger log = LoggerFactory.getLogger(LoggingConfiguration.class);
 }

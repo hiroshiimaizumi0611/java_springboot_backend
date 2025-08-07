@@ -22,3 +22,8 @@ spring:
             password: ${REDIS_PASSWORD}
             ssl: 
                 enabled: ${REDIS_SSL_ENABLED}
+
+app:
+  csv:
+    bucket-name: estimate-app-csv-files
+    url-expiry-minutes: 10
