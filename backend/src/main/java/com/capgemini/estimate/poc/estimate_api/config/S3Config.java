@@ -7,22 +7,25 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+/** S3アクセスに必要なクライアントを提供する設定クラス。 Presigner は署名付きURLの生成に使用します。 */
 @Configuration
 public class S3Config {
 
+  /** S3クライアントのBean定義 */
   @Bean
   public S3Client s3Client() {
     return S3Client.builder()
         .credentialsProvider(DefaultCredentialsProvider.create())
-        .region(Region.AP_NORTHEAST_1)
+        .region(Region.AP_NORTHEAST_1) // バケットのリージョンに合わせて変更
         .build();
   }
 
+  /** 署名URL生成専用のS3Presigner Bean定義。 */
   @Bean
   public S3Presigner s3Presigner() {
     return S3Presigner.builder()
         .credentialsProvider(DefaultCredentialsProvider.create())
-        .region(Region.AP_NORTHEAST_1)
+        .region(Region.AP_NORTHEAST_1) // バケットのリージョンに合わせて変更
         .build();
   }
 }

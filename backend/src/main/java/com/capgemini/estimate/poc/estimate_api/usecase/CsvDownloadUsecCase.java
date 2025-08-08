@@ -4,9 +4,6 @@ import java.net.URL;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
-import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -38,9 +35,6 @@ public class CsvDownloadUsecCase {
 
     GetObjectPresignRequest presign =
         GetObjectPresignRequest.builder().signatureDuration(expiry).getObjectRequest(get).build();
-
-    AwsCredentials creds = DefaultCredentialsProvider.create().resolveCredentials();
-    System.out.println("AccessKeyId:" + creds.accessKeyId()); 
 
     return presigner.presignGetObject(presign).url();
   }
