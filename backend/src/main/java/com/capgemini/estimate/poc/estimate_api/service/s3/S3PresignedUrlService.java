@@ -1,4 +1,4 @@
-package com.capgemini.estimate.poc.estimate_api.service;
+package com.capgemini.estimate.poc.estimate_api.service.s3;
 
 import java.net.URL;
 import java.time.Duration;
@@ -28,7 +28,7 @@ public class S3PresignedUrlService {
   }
 
   /** {@inheritDoc} */
-  public URL generatePresignedUrl(String objectKey, PresignOptions options) {
+  public URL generatePresignedUrl(String objectKey, PresignedUrlOptions options) {
     GetObjectRequest get =
         GetObjectRequest.builder().bucket(options.bucket()).key(objectKey).build();
 
