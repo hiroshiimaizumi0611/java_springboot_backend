@@ -1,0 +1,45 @@
+name: CI/CD – Backend Dev
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  build-push-update-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-1
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag
+        id: version
+        run: echo "TAG=$(git rev-parse --short=7 HEAD)" >> $GITHUB_ENV
+
+      - name: Build & Push backend, update values-dev.yaml
+        env:
+          ECR_REPO: 635566485987.dkr.ecr.ap-northeast-1.amazonaws.com/springboot-api
+          TAG: ${{ env.TAG }}
+        run: |
+          cd backend
+          docker build -t $ECR_REPO:$TAG .
+          docker push $ECR_REPO:$TAG
+          sed -i "s/^  tag: .*/  tag: ${TAG}/" helm-chart/values-dev.yaml
+          cd ..
+
+      - name: Commit and push updated Helm values-dev.yaml
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/helm-chart/values-dev.yaml
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update backend image tag (dev) [skip ci]"
+          git push origin dev
+
