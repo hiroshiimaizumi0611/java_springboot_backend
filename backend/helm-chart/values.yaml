@@ -8,3 +8,8 @@ image:
 service:
   type: ClusterIP
   port: 8080
+
+# Non-secret environment variables passed to the Pod
+# Override per environment: e.g. --set env.SPRING_PROFILES_ACTIVE=prod
+env:
+  SPRING_PROFILES_ACTIVE: prod

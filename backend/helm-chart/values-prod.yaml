@@ -1,0 +1,7 @@
+# Prod overrides for EKS (Azure/Entra ready)
+env:
+  SPRING_PROFILES_ACTIVE: prod
+
+# Override image tag for prod deploys
+image:
+  tag: prod

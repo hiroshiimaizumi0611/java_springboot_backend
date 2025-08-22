@@ -1,0 +1,9 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          cognito:
+            # Cognito does not use offline_access; refresh token issuance is configured on the app client
+            scope: openid, email, profile
+

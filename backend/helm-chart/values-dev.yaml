@@ -1,0 +1,7 @@
+# Dev overrides for EKS (Cognito)
+env:
+  SPRING_PROFILES_ACTIVE: dev
+
+# Override image tag for dev deploys
+image:
+  tag: dev
