@@ -23,6 +23,9 @@ public class SecurityConfig {
     return http
         .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
         .formLogin(formLogin -> formLogin.disable())
+        // Redis Cluster 環境での CROSSSLOT 回避のため、ログイン時のセッション固定化保護で
+        // changeSessionId(=RENAME) ではなく newSession を使用する
+        .sessionManagement(session -> session.sessionFixation().newSession())
         .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))
         .authorizeHttpRequests(
             auth ->
