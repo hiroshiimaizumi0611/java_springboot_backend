@@ -3,10 +3,31 @@ server:
     error:
         whitelabel:
             enabled: false
+    forward-headers-strategy: framework
 
 spring:
     application:
         name: estimate-api
+    session:
+        store-type: redis
+    security:
+        oauth2:
+            client:
+                registration:
+                    cognito:
+                        client-id: ${CLIENT_ID}
+                        client-secret: ${CLIENT_SECRET}
+                        scope: openid, email, profile, offline_access
+                        authorization-grant-type: authorization_code
+                        redirect-uri: ${REDIRECT_URI}
+                        provider: cognito
+                provider:
+                    cognito:
+                        authorization-uri: ${COGNITO_DOMAIN}/oauth2/authorize
+                        token-uri: ${COGNITO_DOMAIN}/oauth2/token
+                        user-info-uri: ${COGNITO_DOMAIN}/oauth2/userInfo
+                        jwk-set-uri: ${COGNITO_DOMAIN}/.well-known/jwks.json
+                        user-name-attribute: email
     datasource:
         url: jdbc:oracle:thin:@//${DB_HOST}:${DB_PORT}/${DB_NAME}
         username: ${DB_USERNAME}
@@ -23,7 +44,14 @@ spring:
             ssl: 
                 enabled: ${REDIS_SSL_ENABLED}
 
+jwt:
+  secret: ${JWT_SECRET}
+
 app:
+  idp:
+    registration-id: cognito
+  session:
+    idle-timeout-minutes: 120
   csv:
     bucket-name: estimate-app-csv-files
     url-expiry-minutes: 10
