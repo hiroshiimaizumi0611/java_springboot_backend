@@ -10,7 +10,7 @@ spec:
     targetRevision: main
     path: backend/helm-chart
     helm:
-      valueFiles: [ values.yaml ]
+      valueFiles: [ values.yaml, values-dev.yaml ]
   destination:
     server: https://kubernetes.default.svc
     namespace: backend
