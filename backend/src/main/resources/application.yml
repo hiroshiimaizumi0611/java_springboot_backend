@@ -10,6 +10,10 @@ spring:
         name: estimate-api
     session:
         store-type: redis
+        redis:
+            # Use a constant hash-tagged namespace so Redis Cluster keeps session keys in the same slot
+            # to avoid CROSSSLOT on RENAME during session id changes.
+            namespace: spring:session:{backend}
     security:
         oauth2:
             client:
