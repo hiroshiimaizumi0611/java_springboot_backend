@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LoggingConfiguration implements InitializingBean {
 
-  @Value("${app.log.level:INFO}")
+  @Value("${app.log.level:DEBUG}")
   private String rootLevel;
 
   @Override
