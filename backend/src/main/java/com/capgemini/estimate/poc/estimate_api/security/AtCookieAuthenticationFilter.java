@@ -65,7 +65,11 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
-    boolean isRefreshPath = "/api/auth/refresh".equals(request.getRequestURI());
+    // コンテキストパス配下でも正しく判定できるようにする
+    String uri = request.getRequestURI();
+    String ctx = request.getContextPath();
+    String path = (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) ? uri.substring(ctx.length()) : uri;
+    boolean isRefreshPath = "/api/auth/refresh".equals(path) || path.endsWith("/api/auth/refresh");
     String jwt = extractAtFromCookie(request);
     if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
