@@ -51,6 +51,8 @@ jwt:
 app:
   idp:
     registration-id: cognito
+  jwt:
+    at-ttl-minutes: 10
   session:
     idle-timeout-minutes: 120
   csv:

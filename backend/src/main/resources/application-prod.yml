@@ -18,4 +18,5 @@ spring:
 app:
   idp:
     registration-id: azure
-
+  jwt:
+    at-ttl-minutes: 1

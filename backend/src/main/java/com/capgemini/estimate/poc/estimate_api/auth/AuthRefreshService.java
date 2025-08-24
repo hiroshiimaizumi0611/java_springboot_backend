@@ -32,6 +32,8 @@ public class AuthRefreshService {
 
   @Value("${app.idp.registration-id:cognito}")
   private String idpRegistrationId;
+  @Value("${app.jwt.at-ttl-minutes:10}")
+  private long atTtlMinutes;
 
   public AuthRefreshService(
       TokenService tokenService,
@@ -87,17 +89,18 @@ public class AuthRefreshService {
     String displayName = (String) httpSession.getAttribute("displayName");
     String subject =
         uid != null ? uid : ((principal != null && principal.getName() != null) ? principal.getName() : sid);
-    String newAt = tokenService.createAccessToken(subject, sid, ver, 10 * 60);
+    long ttlSeconds = atTtlMinutes * 60;
+    String newAt = tokenService.createAccessToken(subject, sid, ver, ttlSeconds);
     boolean secure = isSecureCookies();
-    authCookieService.setAuthCookies(response, newAt, Duration.ofMinutes(10), secure);
+    authCookieService.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
 
     Map<String, Object> ui = new HashMap<>();
     ui.put("uid", subject);
     ui.put("name", displayName != null ? displayName : subject);
-    ui.put("exp", Instant.now().plusSeconds(10 * 60).getEpochSecond());
+    ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
     String payload =
         Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsString(ui).getBytes());
-    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(10).toSeconds());
+    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
 
     return ResponseEntity.noContent().build();
   }

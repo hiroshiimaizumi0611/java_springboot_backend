@@ -7,3 +7,6 @@ spring:
             # Cognito does not use offline_access; refresh token issuance is configured on the app client
             scope: openid, email, profile
 
+app:
+  jwt:
+    at-ttl-minutes: 1

@@ -5,6 +5,7 @@ import com.capgemini.estimate.poc.estimate_api.auth.SessionService;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
 import com.capgemini.estimate.poc.estimate_api.auth.UiCookieService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,6 +42,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   private final SessionService sessionService;
   private final Environment environment;
   private final ObjectMapper objectMapper = new ObjectMapper();
+  @Value("${app.jwt.at-ttl-minutes:10}")
+  private long atTtlMinutes;
 
   public OAuth2LoginSuccessHandler(
       TokenService tokenService,
@@ -72,8 +75,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     String sid = UUID.randomUUID().toString();
     long ver = 1L;
 
-    // 自前 AT を発行
-    String at = tokenService.createAccessToken(username, sid, ver, 10 * 60);
+    // 自前 AT を発行（TTL は設定値を使用）
+    long ttlSeconds = atTtlMinutes * 60;
+    String at = tokenService.createAccessToken(username, sid, ver, ttlSeconds);
     // セッションメタを作成（RT は用いないため jti は保存しない）
     sessionService.upsertOnLogin(username, sid, ver);
 
@@ -86,16 +90,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     // Cookie 配布（prod は Secure=true, local は false）
     boolean secure = isSecureCookies();
-    authCookieService.setAuthCookies(response, at, Duration.ofMinutes(10), secure);
+    authCookieService.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
 
     // UI 表示用ヒント（Base64URL JSON）と署名
     Map<String, Object> ui = new HashMap<>();
     ui.put("uid", username);
     ui.put("name", displayName);
-    ui.put("exp", Instant.now().plusSeconds(10 * 60).getEpochSecond());
+    ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
     String payload = Base64.getUrlEncoder().withoutPadding().encodeToString(
         objectMapper.writeValueAsString(ui).getBytes());
-    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(10).toSeconds());
+    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
 
     // SPA のルートへ返す
     response.sendRedirect("/");
