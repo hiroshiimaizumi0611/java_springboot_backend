@@ -86,7 +86,7 @@ public class AuthRefreshService {
             .attribute(HttpServletResponse.class.getName(), response)
             .build();
 
-    var authorizedClient = null;
+    org.springframework.security.oauth2.client.OAuth2AuthorizedClient authorizedClient = null;
     try {
       authorizedClient = authorizedClientManager.authorize(authRequest);
     } catch (org.springframework.security.oauth2.core.OAuth2AuthorizationException ex) {
