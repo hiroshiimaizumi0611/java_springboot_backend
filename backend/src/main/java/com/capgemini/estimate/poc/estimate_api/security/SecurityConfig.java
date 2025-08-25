@@ -32,9 +32,10 @@ public class SecurityConfig {
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
-        .exceptionHandling(ex -> ex.authenticationEntryPoint(
-            new org.springframework.security.web.authentication.HttpStatusEntryPoint(
-                org.springframework.http.HttpStatus.UNAUTHORIZED)))
+        .exceptionHandling(ex -> ex
+            .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(
+                org.springframework.http.HttpStatus.UNAUTHORIZED))
+            .accessDeniedHandler(new com.capgemini.estimate.poc.estimate_api.security.api.ApiAccessDeniedHandler()))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout").permitAll()
             .anyRequest().authenticated())
