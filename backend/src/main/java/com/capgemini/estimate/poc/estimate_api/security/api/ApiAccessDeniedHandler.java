@@ -25,18 +25,30 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
     String uri = request.getRequestURI();
     String method = request.getMethod();
 
+    String reason;
     if (accessDeniedException instanceof MissingCsrfTokenException) {
       log.warn("403 CSRF missing: method={}, uri={}", method, uri);
+      reason = "missing_csrf";
     } else if (accessDeniedException instanceof InvalidCsrfTokenException invalid) {
       // 実トークンは出さず、発生箇所のみ簡潔に残す
       log.warn("403 CSRF invalid: method={}, uri={} (mismatch)", method, uri);
+      reason = "invalid_csrf";
     } else if (accessDeniedException instanceof CsrfException) {
       log.warn("403 CSRF: method={}, uri={}, type={}", method, uri, accessDeniedException.getClass().getSimpleName());
+      reason = "csrf";
     } else {
       log.warn("403 AccessDenied: method={}, uri={}, ex={}", method, uri, accessDeniedException.toString());
+      reason = "access_denied";
     }
 
-    response.sendError(HttpServletResponse.SC_FORBIDDEN);
+    // クライアント側で即座に原因を把握できるよう、簡易JSONとヘッダを返す
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    response.setContentType("application/json;charset=UTF-8");
+    response.setHeader("X-CSRF-REASON", reason);
+    String body = String.format(
+        "{\n  \"status\": 403,\n  \"error\": \"Forbidden\",\n  \"reason\": \"%s\",\n  \"path\": \"%s\"\n}\n",
+        reason, uri);
+    response.getWriter().write(body);
+    response.getWriter().flush();
   }
 }
-
