@@ -29,8 +29,7 @@ public class SecurityConfig {
     return http
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
         .csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .ignoringRequestMatchers(new AntPathRequestMatcher("/api/auth/refresh")))
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
