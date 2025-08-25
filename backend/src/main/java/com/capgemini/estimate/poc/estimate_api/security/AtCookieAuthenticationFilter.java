@@ -12,8 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -35,7 +33,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
-  private static final Logger log = LoggerFactory.getLogger(AtCookieAuthenticationFilter.class);
 
   private final TokenService tokenService;
   private final SessionService sessionService;
@@ -74,9 +71,6 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
     String path = (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) ? uri.substring(ctx.length()) : uri;
     boolean isRefreshPath = "/api/auth/refresh".equals(path) || path.endsWith("/api/auth/refresh");
     String jwt = extractAtFromCookie(request);
-    if (log.isDebugEnabled()) {
-      log.debug("AT filter start: path={}, isRefresh={}", path, isRefreshPath);
-    }
     if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
         // JWT を検証し、必要なクレーム（sub/sid/ver）を取り出す
@@ -88,9 +82,6 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
         // Redis メタと照合し、無操作タイムアウト未超過なら lastSeen を更新
         boolean ok = sessionService.validateAccessAndTouch(sid, ver, idleTimeoutMinutes);
         if (ok) {
-          if (log.isDebugEnabled()) {
-            log.debug("AT ok: sid={}, ver={}", sid, ver);
-          }
           UsernamePasswordAuthenticationToken auth =
               new UsernamePasswordAuthenticationToken(subject, null, List.of());
           auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -101,7 +92,6 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
             if (sid != null) {
               // セッションを失効させるため ver++
               sessionService.incrementVer(sid);
-              log.info("AT rejected (ver mismatch/idle): sid={}, ver={}, path={}", sid, ver, path);
             }
             boolean secure = isSecureCookies();
             // ブラウザから AT/RT を削除
@@ -112,7 +102,6 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
       } catch (Exception e) {
         // 署名不正や exp 失効など JWT 自体が無効
         if (!isRefreshPath) {
-          log.info("AT invalid JWT: path={}, reason={}", path, e.getClass().getSimpleName());
           boolean secure = isSecureCookies();
           authCookieService.clearAuthCookies(response, secure);
           uiCookieService.clearUiCookies(response, secure);

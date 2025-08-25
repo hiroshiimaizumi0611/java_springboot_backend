@@ -60,13 +60,11 @@ public class AuthRefreshService {
       throws Exception {
     var httpSession = request.getSession(false);
     if (httpSession == null) {
-      log.info("refresh: no HttpSession");
       return ResponseEntity.status(401).build();
     }
     String sid = (String) httpSession.getAttribute("sid");
     Long ver = (Long) httpSession.getAttribute("ver");
     if (sid == null || ver == null) {
-      log.info("refresh: missing sid/ver in HttpSession");
       return ResponseEntity.status(401).build();
     }
 
@@ -96,7 +94,6 @@ public class AuthRefreshService {
       log.info("refresh: authorize exception (sid={}, ver={}, code={})", sid, ver, ex.getError().getErrorCode());
     }
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
-      log.info("refresh: authorize failed (sid={}, ver={})", sid, ver);
       boolean secure = isSecureCookies();
       authCookieService.clearAuthCookies(response, secure);
       uiCookieService.clearUiCookies(response, secure);
@@ -119,7 +116,6 @@ public class AuthRefreshService {
     String payload =
         Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsString(ui).getBytes());
     uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
-    log.info("refresh: success (sid={}, ver={})", sid, ver);
 
     return ResponseEntity.noContent().build();
   }
