@@ -28,7 +28,9 @@ public class SecurityConfig {
   SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
     return http
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
-        .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .ignoringRequestMatchers(new AntPathRequestMatcher("/api/auth/refresh")))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
