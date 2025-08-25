@@ -29,7 +29,8 @@ public class SecurityConfig {
     return http
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
         .csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRequestHandler(new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler()))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
@@ -49,7 +50,9 @@ public class SecurityConfig {
   @Order(2)
   SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
     return http
-        .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+        .csrf(csrf -> csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+            .csrfTokenRequestHandler(new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler()))
         .formLogin(formLogin -> formLogin.disable())
         // Redis Cluster 環境での CROSSSLOT 回避のため、ログイン時のセッション固定化保護で
         // changeSessionId(=RENAME) ではなく newSession を使用する
