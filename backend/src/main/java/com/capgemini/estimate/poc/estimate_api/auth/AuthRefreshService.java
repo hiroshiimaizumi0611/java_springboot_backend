@@ -70,10 +70,14 @@ public class AuthRefreshService {
       return ResponseEntity.status(401).build();
     }
 
-    Authentication principal =
-        (SecurityContextHolder.getContext().getAuthentication() != null)
-            ? SecurityContextHolder.getContext().getAuthentication()
-            : new UsernamePasswordAuthenticationToken(sid, null, List.of());
+    // AuthorizedClientRepository は principal.name をキーに HttpSession から取得するため、
+    // ログイン時に保存した uid を優先して principal に設定する
+    String principalName = (String) httpSession.getAttribute("uid");
+    if (principalName == null && SecurityContextHolder.getContext().getAuthentication() != null) {
+      principalName = SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+    if (principalName == null) principalName = sid;
+    Authentication principal = new UsernamePasswordAuthenticationToken(principalName, null, List.of());
 
     OAuth2AuthorizeRequest authRequest =
         OAuth2AuthorizeRequest.withClientRegistrationId(idpRegistrationId)
@@ -82,7 +86,12 @@ public class AuthRefreshService {
             .attribute(HttpServletResponse.class.getName(), response)
             .build();
 
-    var authorizedClient = authorizedClientManager.authorize(authRequest);
+    var authorizedClient = null;
+    try {
+      authorizedClient = authorizedClientManager.authorize(authRequest);
+    } catch (org.springframework.security.oauth2.core.OAuth2AuthorizationException ex) {
+      log.info("refresh: authorize exception (sid={}, ver={}, code={})", sid, ver, ex.getError().getErrorCode());
+    }
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
       log.info("refresh: authorize failed (sid={}, ver={})", sid, ver);
       boolean secure = isSecureCookies();
