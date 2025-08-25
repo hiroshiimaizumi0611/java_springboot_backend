@@ -71,8 +71,11 @@ public class AuthRefreshService {
     }
 
     // AuthorizedClientRepository は principal.name をキーに HttpSession から取得するため、
-    // ログイン時に保存した uid を優先して principal に設定する
-    String principalName = (String) httpSession.getAttribute("uid");
+    // ログイン時に保存した principalName を最優先、次に uid を使用する
+    String principalName = (String) httpSession.getAttribute("principalName");
+    if (principalName == null) {
+      principalName = (String) httpSession.getAttribute("uid");
+    }
     if (principalName == null && SecurityContextHolder.getContext().getAuthentication() != null) {
       principalName = SecurityContextHolder.getContext().getAuthentication().getName();
     }

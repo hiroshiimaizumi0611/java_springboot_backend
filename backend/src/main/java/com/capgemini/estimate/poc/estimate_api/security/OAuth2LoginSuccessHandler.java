@@ -87,6 +87,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     httpSession.setAttribute("ver", ver);
     httpSession.setAttribute("uid", username);
     httpSession.setAttribute("displayName", displayName);
+    // AuthorizedClientRepository のキーとなる principal.name も保存
+    httpSession.setAttribute("principalName", authentication.getName());
 
     // Cookie 配布（prod は Secure=true, local は false）
     boolean secure = isSecureCookies();
