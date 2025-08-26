@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
  * <p>
  * - 端末セッション用の sid/ver を生成
  * - 自前 AT/RT を発行して Cookie に設定（RT は Path を /api/auth/refresh に限定）
- * - Redis にセッションメタ（ver/lastSeen）を登録
+ * - Redis に端末セッション情報（ver/lastSeen）を登録
  * - UI/UI_SIG を生成して Cookie に設定
  * - 最後に SPA のルートへリダイレクト
  */
@@ -75,7 +75,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     // 自前 AT を発行（TTL は設定値を使用）
     long ttlSeconds = atTtlMinutes * 60;
     String at = tokenService.createAccessToken(username, sid, ver, ttlSeconds);
-    // セッションメタを作成（RT は用いないため jti は保存しない）
+    // 端末セッション情報を作成（RT は用いないため jti は保存しない）
     redisUtil.upsertOnLogin(username, sid, ver);
 
     // HttpSession に sid/ver/uid/displayName を保存（AT 再発行や UI クッキー生成に参照）

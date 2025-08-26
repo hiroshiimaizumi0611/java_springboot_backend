@@ -8,10 +8,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 /**
- * Redis を用いたセッションメタ情報（sid, ver, lastSeen, userId）のヘルパ。
+ * Redis を用いた端末セッション情報（sid, ver, lastSeen, userId）のヘルパ。
  * <p>
  * キー構造:
- * - セッションメタ: {@code sess:{sid}}（Hash）
+ * - 端末セッション情報: {@code sess:{sid}}（Hash）
  * - ユーザー索引: {@code user:{userId}:sids}（Set）
  * 有効期限（TTL）は最終アクセスから14日（スライディング）。
  */
@@ -26,7 +26,7 @@ public class RedisUtil {
   }
 
   /**
-   * セッションメタの Redis キー（sess:{sid}）を返す。
+   * 端末セッション情報の Redis キー（sess:{sid}）を返す。
    *
    * @param sid 端末セッションID
    * @return Redis キー文字列
@@ -46,7 +46,7 @@ public class RedisUtil {
   }
 
   /**
-   * ログイン時にセッションメタを作成（または更新）する。
+   * ログイン時に端末セッション情報を作成（または更新）する。
    *
    * @param userId ユーザーID
    * @param sid 端末セッションID
