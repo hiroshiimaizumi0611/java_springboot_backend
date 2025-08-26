@@ -2,7 +2,7 @@ package com.capgemini.estimate.poc.estimate_api.presentation;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
+import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.AuthRefreshService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
@@ -31,7 +31,7 @@ import java.util.List;
 @RequestMapping("/api")
 public class AuthSessionController {
 
-  private final TokenService tokenService;
+  private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
   private final RedisUtil redisUtil;
   private final Environment environment;
@@ -39,12 +39,12 @@ public class AuthSessionController {
   private final AuthRefreshService authRefreshService;
 
   public AuthSessionController(
-      TokenService tokenService,
+      JwtUtil jwtUtil,
       CookieUtil cookieUtil,
       RedisUtil redisUtil,
       Environment environment,
       AuthRefreshService authRefreshService) {
-    this.tokenService = tokenService;
+    this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
     this.environment = environment;
@@ -62,7 +62,7 @@ public class AuthSessionController {
     String sid = null;
     try {
       if (at != null) {
-        Map<String, Object> c = tokenService.parseClaims(at);
+        Map<String, Object> c = jwtUtil.parseClaims(at);
         sid = (String) c.get("sid");
       }
     } catch (Exception ignored) {}

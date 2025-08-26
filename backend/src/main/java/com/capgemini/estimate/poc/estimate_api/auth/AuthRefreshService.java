@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthRefreshService {
 
-  private final TokenService tokenService;
+  private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
   
   private final RedisUtil redisUtil;
@@ -37,12 +37,12 @@ public class AuthRefreshService {
   private long atTtlMinutes;
 
   public AuthRefreshService(
-      TokenService tokenService,
+      JwtUtil jwtUtil,
       CookieUtil cookieUtil,
       RedisUtil redisUtil,
       Environment environment,
       OAuth2AuthorizedClientManager authorizedClientManager) {
-    this.tokenService = tokenService;
+    this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
     this.environment = environment;
@@ -111,7 +111,7 @@ public class AuthRefreshService {
     String subject =
         uid != null ? uid : ((principal != null && principal.getName() != null) ? principal.getName() : sid);
     long ttlSeconds = atTtlMinutes * 60;
-    String newAt = tokenService.createAccessToken(subject, sid, ver, ttlSeconds);
+    String newAt = jwtUtil.createAccessToken(subject, sid, ver, ttlSeconds);
     boolean secure = isSecureCookies();
     cookieUtil.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
 

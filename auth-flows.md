@@ -1,6 +1,6 @@
 # 認証ユースケース フロー（簡素構成）
 
-登場要素: Browser、Backend（Controller/Filter/Service）、Spring Security（OAuth2）、Redis（Spring Session/自前セッションメタ）、IdP。
+登場要素: Browser、Backend（Controller/Filter/Service）、Spring Security（OAuth2）、Redis（Spring Session/端末セッション情報）、IdP。
 
 ## ログイン（成功）
 - Browser → Backend: `GET /oauth2/authorization/{registrationId}`（ログイン開始）
@@ -19,7 +19,7 @@
 - Browser → Backend: 任意の `GET/POST /api/**`（Cookie: `AT`）
 - `AtCookieAuthenticationFilter`:
   - 自前 AT の検証（署名/exp）
-  - Redis `sess:{sid}` と照合（`ver` 一致、`lastSeen` 更新、120分アイドル判定）
+  - Redis の端末セッション情報（`sess:{sid}`）と照合（`ver` 一致、`lastSeen` 更新、120分アイドル判定）
   - OK → SecurityContext に認証セット
   - NG（ver 不一致/アイドル超過, refresh 以外）→ `ver++` ＋ `AT/UI` クリア
   - NG（JWT 無効, refresh 以外）→ `AT/UI` クリア（sid 不明のため `ver++` なし）

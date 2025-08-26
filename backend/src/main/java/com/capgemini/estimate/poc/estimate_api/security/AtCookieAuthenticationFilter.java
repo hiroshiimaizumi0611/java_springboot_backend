@@ -2,7 +2,7 @@ package com.capgemini.estimate.poc.estimate_api.security;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
+import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
  
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -34,7 +34,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
 
-  private final TokenService tokenService;
+  private final JwtUtil jwtUtil;
   private final RedisUtil redisUtil;
   private final CookieUtil cookieUtil;
   private final Environment environment;
@@ -43,11 +43,11 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   private long idleTimeoutMinutes;
 
   public AtCookieAuthenticationFilter(
-      TokenService tokenService,
+      JwtUtil jwtUtil,
       RedisUtil redisUtil,
       CookieUtil cookieUtil,
       Environment environment) {
-    this.tokenService = tokenService;
+    this.jwtUtil = jwtUtil;
     this.redisUtil = redisUtil;
     this.cookieUtil = cookieUtil;
     this.environment = environment;
@@ -71,7 +71,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
     if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
       try {
         // JWT を検証し、必要なクレーム（sub/sid/ver）を取り出す
-        Map<String, Object> claims = tokenService.parseClaims(jwt);
+        Map<String, Object> claims = jwtUtil.parseClaims(jwt);
         String subject = (String) claims.get("sub");
         String sid = (String) claims.get("sid");
         long ver = ((Number) claims.getOrDefault("ver", 1)).longValue();

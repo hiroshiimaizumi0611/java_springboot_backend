@@ -1,50 +1,58 @@
 package com.capgemini.estimate.poc.estimate_api.auth;
 
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import java.util.Map;
+import java.util.UUID;
 
-@Component
+import javax.crypto.SecretKey;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+/**
+ * アプリケーション発行の JWT（AT）を扱うユーティリティ。
+ * <p>
+ * - 署名: HS256（共有シークレット {@code jwt.secret}）。
+ * - 主要クレーム: iss, aud(=iss), iat, nbf, exp, jti, sid, ver
+ */
+@Service
 public class JwtUtil {
+
   @Value("${jwt.secret}")
   private String secret;
 
-  private final long expiration = 900_000; // 15min
+  @Value("${spring.application.name:estimate-api}")
+  private String issuer;
 
-  public String createToken(String username) {
-    var key = Keys.hmacShaKeyFor(secret.getBytes());
+  /** HS256 の署名鍵を生成する。シークレットは十分な長さ（32バイト以上）を推奨。 */
+  private SecretKey  key() {
+    byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+    return Keys.hmacShaKeyFor(bytes);
+  }
+
+  /** AT（短命）を生成する。sid/ver を含め、端末セッション情報と整合性を取る。 */
+  public String createAccessToken(String subject, String sid, long sessionVersion, long ttlSeconds) {
+    Instant now = Instant.now();
     return Jwts.builder()
-        .subject(username)
-        .expiration(new Date(System.currentTimeMillis() + expiration))
-        .signWith(key)
+        .subject(subject)
+        .issuer(issuer)
+        .audience().add(issuer).and()
+        .issuedAt(Date.from(now))
+        .notBefore(Date.from(now))
+        .expiration(Date.from(now.plusSeconds(ttlSeconds)))
+        .id(UUID.randomUUID().toString())
+        .claim("sid", sid)
+        .claim("ver", sessionVersion)
+        .signWith(key(), Jwts.SIG.HS256)
         .compact();
   }
 
-  public String getUsername(String token) {
-    var key = Keys.hmacShaKeyFor(secret.getBytes());
-    return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject();
-  }
-
-  public boolean validateToken(String token) {
-    var key = Keys.hmacShaKeyFor(secret.getBytes());
-    try {
-      Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-      return true;
-    } catch (JwtException e) {
-      return false;
-    }
-  }
-
-  public long getRemainingExpiration(String token) {
-    var key = Keys.hmacShaKeyFor(secret.getBytes());
-    Date expiration =
-        Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getExpiration();
-    long now = System.currentTimeMillis();
-    long remain = (expiration.getTime() - now) / 1000;
-
-    return Math.max(remain, 1);
+  /** 署名検証済みの主要クレームを取り出す（失敗時は例外）。 */
+  public Map<String, Object> parseClaims(String jwt) {
+    return Jwts.parser().verifyWith(key()).build().parseSignedClaims(jwt).getPayload();
   }
 }

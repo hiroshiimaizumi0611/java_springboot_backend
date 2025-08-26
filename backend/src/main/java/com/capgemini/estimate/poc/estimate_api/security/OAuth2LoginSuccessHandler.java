@@ -2,7 +2,7 @@ package com.capgemini.estimate.poc.estimate_api.security;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
+import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.ServletException;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-  private final TokenService tokenService;
+  private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
   
   private final RedisUtil redisUtil;
@@ -45,11 +45,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   private long atTtlMinutes;
 
   public OAuth2LoginSuccessHandler(
-      TokenService tokenService,
+      JwtUtil jwtUtil,
       CookieUtil cookieUtil,
       RedisUtil redisUtil,
       Environment environment) {
-    this.tokenService = tokenService;
+    this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
     this.environment = environment;
@@ -74,7 +74,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     // 自前 AT を発行（TTL は設定値を使用）
     long ttlSeconds = atTtlMinutes * 60;
-    String at = tokenService.createAccessToken(username, sid, ver, ttlSeconds);
+    String at = jwtUtil.createAccessToken(username, sid, ver, ttlSeconds);
     // 端末セッション情報を作成（RT は用いないため jti は保存しない）
     redisUtil.upsertOnLogin(username, sid, ver);
 
