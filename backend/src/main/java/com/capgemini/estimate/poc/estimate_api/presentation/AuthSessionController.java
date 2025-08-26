@@ -1,6 +1,7 @@
 package com.capgemini.estimate.poc.estimate_api.presentation;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
+import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
 import com.capgemini.estimate.poc.estimate_api.auth.AuthRefreshService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +33,7 @@ public class AuthSessionController {
 
   private final TokenService tokenService;
   private final CookieUtil cookieUtil;
-  private final com.capgemini.estimate.poc.estimate_api.auth.SessionService sessionService;
+  private final RedisUtil redisUtil;
   private final Environment environment;
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final AuthRefreshService authRefreshService;
@@ -40,12 +41,12 @@ public class AuthSessionController {
   public AuthSessionController(
       TokenService tokenService,
       CookieUtil cookieUtil,
-      com.capgemini.estimate.poc.estimate_api.auth.SessionService sessionService,
+      RedisUtil redisUtil,
       Environment environment,
       AuthRefreshService authRefreshService) {
     this.tokenService = tokenService;
     this.cookieUtil = cookieUtil;
-    this.sessionService = sessionService;
+    this.redisUtil = redisUtil;
     this.environment = environment;
     this.authRefreshService = authRefreshService;
   }
@@ -66,7 +67,7 @@ public class AuthSessionController {
       }
     } catch (Exception ignored) {}
     if (sid != null) {
-      sessionService.incrementVer(sid);
+      redisUtil.incrementVer(sid);
     }
     cookieUtil.clearAuthCookies(response, secure);
     cookieUtil.clearUiCookies(response, secure);

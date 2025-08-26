@@ -26,7 +26,7 @@ public class AuthRefreshService {
   private final TokenService tokenService;
   private final CookieUtil cookieUtil;
   
-  private final SessionService sessionService;
+  private final RedisUtil redisUtil;
   private final Environment environment;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -39,12 +39,12 @@ public class AuthRefreshService {
   public AuthRefreshService(
       TokenService tokenService,
       CookieUtil cookieUtil,
-      SessionService sessionService,
+      RedisUtil redisUtil,
       Environment environment,
       OAuth2AuthorizedClientManager authorizedClientManager) {
     this.tokenService = tokenService;
     this.cookieUtil = cookieUtil;
-    this.sessionService = sessionService;
+    this.redisUtil = redisUtil;
     this.environment = environment;
     this.authorizedClientManager = authorizedClientManager;
   }
@@ -66,7 +66,7 @@ public class AuthRefreshService {
     }
 
     // Redis 側の ver と HttpSession 側の ver が一致しない場合は、アイドル超過等で失効済みと判断して 401 を返す
-    Long redisVer = sessionService.getVer(sid);
+    Long redisVer = redisUtil.getVer(sid);
     if (redisVer == null || redisVer.longValue() != ver.longValue()) {
       boolean secure = isSecureCookies();
       cookieUtil.clearAuthCookies(response, secure);

@@ -1,7 +1,7 @@
 package com.capgemini.estimate.poc.estimate_api.security;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.SessionService;
+import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
  
 import jakarta.servlet.FilterChain;
@@ -35,7 +35,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
 
   private final TokenService tokenService;
-  private final SessionService sessionService;
+  private final RedisUtil redisUtil;
   private final CookieUtil cookieUtil;
   private final Environment environment;
 
@@ -44,11 +44,11 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
 
   public AtCookieAuthenticationFilter(
       TokenService tokenService,
-      SessionService sessionService,
+      RedisUtil redisUtil,
       CookieUtil cookieUtil,
       Environment environment) {
     this.tokenService = tokenService;
-    this.sessionService = sessionService;
+    this.redisUtil = redisUtil;
     this.cookieUtil = cookieUtil;
     this.environment = environment;
   }
@@ -77,7 +77,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
         long ver = ((Number) claims.getOrDefault("ver", 1)).longValue();
 
         // Redis メタと照合し、無操作タイムアウト未超過なら lastSeen を更新
-        boolean ok = sessionService.validateAccessAndTouch(sid, ver, idleTimeoutMinutes);
+        boolean ok = redisUtil.validateAccessAndTouch(sid, ver, idleTimeoutMinutes);
         if (ok) {
           UsernamePasswordAuthenticationToken auth =
               new UsernamePasswordAuthenticationToken(subject, null, List.of());
@@ -88,7 +88,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
           if (!isRefreshPath) {
             if (sid != null) {
               // セッションを失効させるため ver++
-              sessionService.incrementVer(sid);
+              redisUtil.incrementVer(sid);
             }
             boolean secure = isSecureCookies();
             // ブラウザから AT/RT を削除

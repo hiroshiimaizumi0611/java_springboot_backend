@@ -1,7 +1,7 @@
 package com.capgemini.estimate.poc.estimate_api.security;
 
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.SessionService;
+import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +38,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   private final TokenService tokenService;
   private final CookieUtil cookieUtil;
   
-  private final SessionService sessionService;
+  private final RedisUtil redisUtil;
   private final Environment environment;
   private final ObjectMapper objectMapper = new ObjectMapper();
   @Value("${app.jwt.at-ttl-minutes:10}")
@@ -47,11 +47,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   public OAuth2LoginSuccessHandler(
       TokenService tokenService,
       CookieUtil cookieUtil,
-      SessionService sessionService,
+      RedisUtil redisUtil,
       Environment environment) {
     this.tokenService = tokenService;
     this.cookieUtil = cookieUtil;
-    this.sessionService = sessionService;
+    this.redisUtil = redisUtil;
     this.environment = environment;
   }
 
@@ -76,7 +76,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     long ttlSeconds = atTtlMinutes * 60;
     String at = tokenService.createAccessToken(username, sid, ver, ttlSeconds);
     // セッションメタを作成（RT は用いないため jti は保存しない）
-    sessionService.upsertOnLogin(username, sid, ver);
+    redisUtil.upsertOnLogin(username, sid, ver);
 
     // HttpSession に sid/ver/uid/displayName を保存（AT 再発行や UI クッキー生成に参照）
     var httpSession = request.getSession(true);
