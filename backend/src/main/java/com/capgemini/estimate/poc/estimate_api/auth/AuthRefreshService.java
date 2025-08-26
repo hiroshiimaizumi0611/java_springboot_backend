@@ -3,6 +3,7 @@ package com.capgemini.estimate.poc.estimate_api.auth;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -53,9 +55,17 @@ public class AuthRefreshService {
     return !environment.acceptsProfiles(Profiles.of("local"));
   }
 
+  /**
+   * AT を再発行し、UI Cookie を更新する。
+   *
+   * @param request HttpServletRequest
+   * @param response HttpServletResponse
+   * @return 204: 再発行成功、401: 再ログインが必要
+   * @throws Exception 変換エラーなど
+   */
   public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
       throws Exception {
-    var httpSession = request.getSession(false);
+    HttpSession httpSession = request.getSession(false);
     if (httpSession == null) {
       return ResponseEntity.status(401).build();
     }
@@ -69,9 +79,7 @@ public class AuthRefreshService {
     Long redisVer = redisUtil.getVer(sid);
     if (redisVer == null || redisVer.longValue() != ver.longValue()) {
       boolean secure = isSecureCookies();
-      cookieUtil.clearAuthCookies(response, secure);
-      cookieUtil.clearUiCookies(response, secure);
-      return ResponseEntity.status(401).build();
+      return unauthorizedAndClearCookies(response);
     }
 
     // AuthorizedClientRepository は principal.name をキーに HttpSession から取得するため、
@@ -93,7 +101,7 @@ public class AuthRefreshService {
             .attribute(HttpServletResponse.class.getName(), response)
             .build();
 
-    org.springframework.security.oauth2.client.OAuth2AuthorizedClient authorizedClient = null;
+    OAuth2AuthorizedClient authorizedClient = null;
     try {
       authorizedClient = authorizedClientManager.authorize(authRequest);
     } catch (org.springframework.security.oauth2.core.OAuth2AuthorizationException ex) {
@@ -101,9 +109,7 @@ public class AuthRefreshService {
     }
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
       boolean secure = isSecureCookies();
-      cookieUtil.clearAuthCookies(response, secure);
-      cookieUtil.clearUiCookies(response, secure);
-      return ResponseEntity.status(401).build();
+      return unauthorizedAndClearCookies(response);
     }
 
     String uid = (String) httpSession.getAttribute("uid");
@@ -125,4 +131,23 @@ public class AuthRefreshService {
 
     return ResponseEntity.noContent().build();
   }
+
+
+  private String resolvePrincipalName(HttpSession httpSession) {
+    String principalName = (String) httpSession.getAttribute("principalName");
+    if (principalName == null) { principalName = (String) httpSession.getAttribute("uid"); }
+    if (principalName == null && SecurityContextHolder.getContext().getAuthentication() != null) {
+      principalName = SecurityContextHolder.getContext().getAuthentication().getName();
+    }
+    if (principalName == null) { principalName = (String) httpSession.getAttribute("sid"); }
+    return principalName;
+  }
+
+  private ResponseEntity<Void> unauthorizedAndClearCookies(HttpServletResponse response) {
+    boolean secure = isSecureCookies();
+    cookieUtil.clearAuthCookies(response, secure);
+    cookieUtil.clearUiCookies(response, secure);
+    return ResponseEntity.status(401).build();
+  }
+
 }
