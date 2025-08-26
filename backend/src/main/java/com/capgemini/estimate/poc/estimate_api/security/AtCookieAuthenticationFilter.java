@@ -1,9 +1,9 @@
 package com.capgemini.estimate.poc.estimate_api.security;
 
-import com.capgemini.estimate.poc.estimate_api.auth.AuthCookieService;
+import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.SessionService;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
-import com.capgemini.estimate.poc.estimate_api.auth.UiCookieService;
+ 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -36,8 +36,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
 
   private final TokenService tokenService;
   private final SessionService sessionService;
-  private final AuthCookieService authCookieService;
-  private final UiCookieService uiCookieService;
+  private final CookieUtil cookieUtil;
   private final Environment environment;
 
   @Value("${app.session.idle-timeout-minutes:120}")
@@ -46,13 +45,11 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   public AtCookieAuthenticationFilter(
       TokenService tokenService,
       SessionService sessionService,
-      AuthCookieService authCookieService,
-      UiCookieService uiCookieService,
+      CookieUtil cookieUtil,
       Environment environment) {
     this.tokenService = tokenService;
     this.sessionService = sessionService;
-    this.authCookieService = authCookieService;
-    this.uiCookieService = uiCookieService;
+    this.cookieUtil = cookieUtil;
     this.environment = environment;
   }
 
@@ -95,16 +92,16 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
             }
             boolean secure = isSecureCookies();
             // ブラウザから AT/RT を削除
-            authCookieService.clearAuthCookies(response, secure);
-            uiCookieService.clearUiCookies(response, secure);
+            cookieUtil.clearAuthCookies(response, secure);
+            cookieUtil.clearUiCookies(response, secure);
           }
         }
       } catch (Exception e) {
         // 署名不正や exp 失効など JWT 自体が無効
         if (!isRefreshPath) {
           boolean secure = isSecureCookies();
-          authCookieService.clearAuthCookies(response, secure);
-          uiCookieService.clearUiCookies(response, secure);
+          cookieUtil.clearAuthCookies(response, secure);
+          cookieUtil.clearUiCookies(response, secure);
         }
       }
     }

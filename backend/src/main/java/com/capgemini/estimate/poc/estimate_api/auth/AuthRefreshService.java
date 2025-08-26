@@ -1,8 +1,6 @@
 package com.capgemini.estimate.poc.estimate_api.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
@@ -24,11 +22,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthRefreshService {
-  private static final Logger log = LoggerFactory.getLogger(AuthRefreshService.class);
 
   private final TokenService tokenService;
-  private final AuthCookieService authCookieService;
-  private final UiCookieService uiCookieService;
+  private final CookieUtil cookieUtil;
+  
+  private final SessionService sessionService;
   private final Environment environment;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -40,14 +38,13 @@ public class AuthRefreshService {
 
   public AuthRefreshService(
       TokenService tokenService,
-      AuthCookieService authCookieService,
-      UiCookieService uiCookieService,
+      CookieUtil cookieUtil,
       SessionService sessionService,
       Environment environment,
       OAuth2AuthorizedClientManager authorizedClientManager) {
     this.tokenService = tokenService;
-    this.authCookieService = authCookieService;
-    this.uiCookieService = uiCookieService;
+    this.cookieUtil = cookieUtil;
+    this.sessionService = sessionService;
     this.environment = environment;
     this.authorizedClientManager = authorizedClientManager;
   }
@@ -65,6 +62,15 @@ public class AuthRefreshService {
     String sid = (String) httpSession.getAttribute("sid");
     Long ver = (Long) httpSession.getAttribute("ver");
     if (sid == null || ver == null) {
+      return ResponseEntity.status(401).build();
+    }
+
+    // Redis 側の ver と HttpSession 側の ver が一致しない場合は、アイドル超過等で失効済みと判断して 401 を返す
+    Long redisVer = sessionService.getVer(sid);
+    if (redisVer == null || redisVer.longValue() != ver.longValue()) {
+      boolean secure = isSecureCookies();
+      cookieUtil.clearAuthCookies(response, secure);
+      cookieUtil.clearUiCookies(response, secure);
       return ResponseEntity.status(401).build();
     }
 
@@ -91,12 +97,12 @@ public class AuthRefreshService {
     try {
       authorizedClient = authorizedClientManager.authorize(authRequest);
     } catch (org.springframework.security.oauth2.core.OAuth2AuthorizationException ex) {
-      log.info("refresh: authorize exception (sid={}, ver={}, code={})", sid, ver, ex.getError().getErrorCode());
+      // fallthrough to 401
     }
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
       boolean secure = isSecureCookies();
-      authCookieService.clearAuthCookies(response, secure);
-      uiCookieService.clearUiCookies(response, secure);
+      cookieUtil.clearAuthCookies(response, secure);
+      cookieUtil.clearUiCookies(response, secure);
       return ResponseEntity.status(401).build();
     }
 
@@ -107,7 +113,7 @@ public class AuthRefreshService {
     long ttlSeconds = atTtlMinutes * 60;
     String newAt = tokenService.createAccessToken(subject, sid, ver, ttlSeconds);
     boolean secure = isSecureCookies();
-    authCookieService.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
+    cookieUtil.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
 
     Map<String, Object> ui = new HashMap<>();
     ui.put("uid", subject);
@@ -115,7 +121,7 @@ public class AuthRefreshService {
     ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
     String payload =
         Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsString(ui).getBytes());
-    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
+    cookieUtil.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
 
     return ResponseEntity.noContent().build();
   }

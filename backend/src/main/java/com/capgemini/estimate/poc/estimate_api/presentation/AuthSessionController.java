@@ -1,9 +1,8 @@
 package com.capgemini.estimate.poc.estimate_api.presentation;
 
-import com.capgemini.estimate.poc.estimate_api.auth.AuthCookieService;
+import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
 import com.capgemini.estimate.poc.estimate_api.auth.AuthRefreshService;
-import com.capgemini.estimate.poc.estimate_api.auth.UiCookieService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,8 +31,7 @@ import java.util.List;
 public class AuthSessionController {
 
   private final TokenService tokenService;
-  private final AuthCookieService authCookieService;
-  private final UiCookieService uiCookieService;
+  private final CookieUtil cookieUtil;
   private final com.capgemini.estimate.poc.estimate_api.auth.SessionService sessionService;
   private final Environment environment;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -41,14 +39,12 @@ public class AuthSessionController {
 
   public AuthSessionController(
       TokenService tokenService,
-      AuthCookieService authCookieService,
-      UiCookieService uiCookieService,
+      CookieUtil cookieUtil,
       com.capgemini.estimate.poc.estimate_api.auth.SessionService sessionService,
       Environment environment,
       AuthRefreshService authRefreshService) {
     this.tokenService = tokenService;
-    this.authCookieService = authCookieService;
-    this.uiCookieService = uiCookieService;
+    this.cookieUtil = cookieUtil;
     this.sessionService = sessionService;
     this.environment = environment;
     this.authRefreshService = authRefreshService;
@@ -72,8 +68,8 @@ public class AuthSessionController {
     if (sid != null) {
       sessionService.incrementVer(sid);
     }
-    authCookieService.clearAuthCookies(response, secure);
-    uiCookieService.clearUiCookies(response, secure);
+    cookieUtil.clearAuthCookies(response, secure);
+    cookieUtil.clearUiCookies(response, secure);
     return ResponseEntity.noContent().build();
   }
 

@@ -1,9 +1,8 @@
 package com.capgemini.estimate.poc.estimate_api.security;
 
-import com.capgemini.estimate.poc.estimate_api.auth.AuthCookieService;
+import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.SessionService;
 import com.capgemini.estimate.poc.estimate_api.auth.TokenService;
-import com.capgemini.estimate.poc.estimate_api.auth.UiCookieService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.ServletException;
@@ -37,8 +36,8 @@ import org.springframework.stereotype.Component;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final TokenService tokenService;
-  private final AuthCookieService authCookieService;
-  private final UiCookieService uiCookieService;
+  private final CookieUtil cookieUtil;
+  
   private final SessionService sessionService;
   private final Environment environment;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -47,13 +46,11 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
   public OAuth2LoginSuccessHandler(
       TokenService tokenService,
-      AuthCookieService authCookieService,
-      UiCookieService uiCookieService,
+      CookieUtil cookieUtil,
       SessionService sessionService,
       Environment environment) {
     this.tokenService = tokenService;
-    this.authCookieService = authCookieService;
-    this.uiCookieService = uiCookieService;
+    this.cookieUtil = cookieUtil;
     this.sessionService = sessionService;
     this.environment = environment;
   }
@@ -92,7 +89,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     // Cookie 配布（prod は Secure=true, local は false）
     boolean secure = isSecureCookies();
-    authCookieService.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
+    cookieUtil.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
 
     // UI 表示用ヒント（Base64URL JSON）と署名
     Map<String, Object> ui = new HashMap<>();
@@ -101,7 +98,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
     String payload = Base64.getUrlEncoder().withoutPadding().encodeToString(
         objectMapper.writeValueAsString(ui).getBytes());
-    uiCookieService.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
+    cookieUtil.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
 
     // SPA のルートへ返す
     response.sendRedirect("/");

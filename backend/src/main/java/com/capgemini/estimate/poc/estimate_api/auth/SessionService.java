@@ -63,6 +63,18 @@ public class SessionService {
     redis.expire(k, TTL);
   }
 
+  /** 現在のセッションバージョン（ver）を取得する。存在しなければ null。 */
+  public Long getVer(String sid) {
+    String k = key(sid);
+    Object v = redis.opsForHash().get(k, "ver");
+    if (v == null) return null;
+    try {
+      return Long.parseLong(String.valueOf(v));
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   /**
    * アクセス（AT）時の照合: ver 一致かつ無操作タイムアウト未超過なら lastSeen 更新して true。
    * 条件を満たさなければ false。
@@ -83,6 +95,4 @@ public class SessionService {
     touch(sid);
     return true;
   }
-
-  // 全端末ログアウト機能は削除したため、ユーザー→sid の列挙メソッドは提供しない
 }
