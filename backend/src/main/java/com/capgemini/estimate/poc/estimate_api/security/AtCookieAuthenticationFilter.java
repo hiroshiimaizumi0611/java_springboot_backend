@@ -26,7 +26,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * AT（Cookie）での認証を担当するフィルタ。
  * <p>
  * - Cookie から AT を取得し、JWT を検証
- * - Redis のセッションメタ（sid/ver/lastSeen）と照合し、無操作タイムアウトも判定
+ * - Redis の端末セッション情報（sid/ver/lastSeen）と照合し、無操作タイムアウトも判定
  * - 正常なら Spring Security に認証をセット
  * - ver 不一致/タイムアウト時は（refresh を除き）Cookie を削除し ver++
  * - 署名/exp 不正時も（refresh を除き）Cookie を削除
@@ -76,7 +76,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
         String sid = (String) claims.get("sid");
         long ver = ((Number) claims.getOrDefault("ver", 1)).longValue();
 
-        // Redis メタと照合し、無操作タイムアウト未超過なら lastSeen を更新
+        // 端末セッション情報と照合し、無操作タイムアウト未超過なら lastSeen を更新
         boolean ok = redisUtil.validateAccessAndTouch(sid, ver, idleTimeoutMinutes);
         if (ok) {
           UsernamePasswordAuthenticationToken auth =

@@ -37,7 +37,7 @@
 
 ## 認証（新仕様）
 - 方式: OAuth2/OIDC ログイン（`/oauth2/authorization/{registrationId}` → `/login/oauth2/code/{registrationId}`）。自前 JWT は HS256（共有シークレット）。Cookie は `AT` と `UI` を使用（UI は署名なし）。AT=10分。シークレットは `JWT_SECRET`（32バイト以上推奨）。
-- セッションメタ: `sid, ver, lastSeen` を Redis に保存（Spring Session）。`ver` 不一致で失効。
+ - 端末セッション情報: `sid, ver, lastSeen` を Redis に保存（Spring Session）。`ver` 不一致で失効。
 - 保護: Cookie ベースで `AT` を検証（署名/exp/`ver`）。CSRF 有効。`/auth/refresh` は CSRF ヘッダ必須。SPA は同一オリジン前提。
 - Cookie属性（prod=HTTPS, local=HTTP）:
   - AT: HttpOnly; SameSite=Lax; Path=/; Secure=true(prod)/false(local)

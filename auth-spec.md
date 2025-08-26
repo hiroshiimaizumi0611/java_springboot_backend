@@ -9,7 +9,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 - **Browser（SPA）**
 - **BFF（Spring Boot 3）**
 - **IdP**：本番＝Entra ID、開発＝Cognito
-- **Redis**（Spring Session／セッションメタ保存）
+- **Redis**（Spring Session／端末セッション情報 保存）
 
 ---
 
@@ -29,7 +29,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
    ↕ Cookie: AT, JSESSIONID, UI
 [BFF (Spring Boot 3)]
    ↔ HttpSession（Spring Session/Redis：Authorized Client（IdP AT/RT））
-   ↔ 自前セッションメタ（Redis：sid/ver/lastSeen）
+   ↔ 端末セッション情報（Redis：sid/ver/lastSeen）
    ↔ IdP（Entra / Cognito）
 ```
 
@@ -48,7 +48,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 
 ---
 
-## 6. セッションメタ（Redis）
+## 6. 端末セッション情報（Redis）
 - キー：`sess:{sid}`
 - 値：
   - `userId`
