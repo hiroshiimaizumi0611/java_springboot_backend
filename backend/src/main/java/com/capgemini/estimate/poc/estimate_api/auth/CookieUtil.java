@@ -40,7 +40,12 @@ public class CookieUtil {
     response.addHeader("Set-Cookie", at.toString());
   }
 
-  /** AT の削除用 Set-Cookie（Max-Age=0）を付与する。 */
+  /**
+   * AT の削除用 Set-Cookie（Max-Age=0）をレスポンスに付与する。
+   *
+   * @param response HttpServletResponse
+   * @param secure Secure 属性（prod=true/local=false）
+   */
   public void clearAuthCookies(HttpServletResponse response, boolean secure) {
     ResponseCookie at =
         ResponseCookie.from("AT", "")
@@ -77,7 +82,12 @@ public class CookieUtil {
     response.addHeader("Set-Cookie", ui.toString());
   }
 
-  /** UI の削除用 Set-Cookie（Max-Age=0）を付与する。 */
+  /**
+   * UI の削除用 Set-Cookie（Max-Age=0）をレスポンスに付与する。
+   *
+   * @param response HttpServletResponse
+   * @param secure Secure 属性（prod=true/local=false）
+   */
   public void clearUiCookies(HttpServletResponse response, boolean secure) {
     ResponseCookie ui =
         ResponseCookie.from("UI", "")
