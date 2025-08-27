@@ -36,12 +36,12 @@
 - 任意: `SPRING_PROFILES_ACTIVE=local` を設定し、`bootRun` でローカル上書きを利用可能。
 
 ## 認証（新仕様）
-- 方式: OAuth2/OIDC ログイン（`/oauth2/authorization/{registrationId}` → `/login/oauth2/code/{registrationId}`）。自前 JWT は HS256（共有シークレット）。Cookie は `AT` と `UI` を使用（UI は署名なし）。AT=10分。シークレットは `JWT_SECRET`（32バイト以上推奨）。
+- 方式: OAuth2/OIDC ログイン（`/oauth2/authorization/{registrationId}` → `/login/oauth2/code/{registrationId}`）。自前 JWT は HS256（共有シークレット）。Cookie は `access_token` と `user_info` を使用（user_info は署名なし）。AT=10分。シークレットは `JWT_SECRET`（32バイト以上推奨）。
  - 端末セッション情報: `sid, ver, lastSeen` を Redis に保存（Spring Session）。`ver` 不一致で失効。
-- 保護: Cookie ベースで `AT` を検証（署名/exp/`ver`）。CSRF 有効。`/auth/refresh` は CSRF ヘッダ必須。SPA は同一オリジン前提。
+- 保護: Cookie ベースで `access_token` を検証（署名/exp/`ver`）。CSRF 有効。`/auth/refresh` は CSRF ヘッダ必須。SPA は同一オリジン前提。
 - Cookie属性（prod=HTTPS, local=HTTP）:
-  - AT: HttpOnly; SameSite=Lax; Path=/; Secure=true(prod)/false(local)
-  - UI: 非HttpOnly; SameSite=Lax; Path=/; Max-Age≈10m; Secure=true/false（Base64URL JSON）
+  - access_token: HttpOnly; SameSite=Lax; Path=/; Secure=true(prod)/false(local)
+  - user_info: 非HttpOnly; SameSite=Lax; Path=/; Max-Age≈10m; Secure=true/false（Base64URL JSON）
 - エンドポイント: `POST /api/auth/refresh`（204/IdP RT により更新）、`POST /api/auth/logout`（204/ver++/Cookie 削除）、`GET /api/me`（UI 情報）、`GET /api/csrf`（CSRF 取得）。
 - 主要環境変数: `SPRING_PROFILES_ACTIVE`、`spring.security.oauth2.client.*`、`JWT_SECRET`、`REDIS_*`。
 - 例

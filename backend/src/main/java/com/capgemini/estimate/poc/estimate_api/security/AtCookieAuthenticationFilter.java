@@ -13,8 +13,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,7 +36,6 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   private final JwtUtil jwtUtil;
   private final RedisUtil redisUtil;
   private final CookieUtil cookieUtil;
-  private final Environment environment;
 
   @Value("${app.session.idle-timeout-minutes:120}")
   private long idleTimeoutMinutes;
@@ -46,17 +43,10 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   public AtCookieAuthenticationFilter(
       JwtUtil jwtUtil,
       RedisUtil redisUtil,
-      CookieUtil cookieUtil,
-      Environment environment) {
+      CookieUtil cookieUtil) {
     this.jwtUtil = jwtUtil;
     this.redisUtil = redisUtil;
     this.cookieUtil = cookieUtil;
-    this.environment = environment;
-  }
-
-  /** local 以外のプロファイルでは Secure Cookie を有効にする。 */
-  private boolean isSecureCookies() {
-    return !environment.acceptsProfiles(Profiles.of("local"));
   }
 
   @Override
@@ -87,7 +77,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
               // セッションを失効させるため ver++
               redisUtil.incrementVer(sid);
             }
-            boolean secure = isSecureCookies();
+            boolean secure = cookieUtil.isSecureCookie();
             // ブラウザから AT/RT を削除
             cookieUtil.clearAuthCookies(response, secure);
             cookieUtil.clearUiCookies(response, secure);
@@ -96,7 +86,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
       } catch (Exception e) {
         // 署名不正や exp 失効など JWT 自体が無効
         if (!isRefreshPath) {
-          boolean secure = isSecureCookies();
+          boolean secure = cookieUtil.isSecureCookie();
           cookieUtil.clearAuthCookies(response, secure);
           cookieUtil.clearUiCookies(response, secure);
         }
@@ -105,12 +95,12 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  /** Cookie から AT を取り出す（存在しない場合は null）。 */
+  /** Cookie から access_token を取り出す（存在しない場合は null）。 */
   private String extractAtFromCookie(HttpServletRequest request) {
     Cookie[] cookies = request.getCookies();
     if (cookies == null) return null;
     for (Cookie c : cookies) {
-      if ("AT".equals(c.getName())) {
+      if ("access_token".equals(c.getName())) {
         return c.getValue();
       }
     }

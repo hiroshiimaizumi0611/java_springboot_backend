@@ -26,7 +26,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 ## 4. アーキテクチャ
 ```
 [Browser]
-   ↕ Cookie: AT, JSESSIONID, UI
+   ↕ Cookie: access_token, JSESSIONID, user_info
 [BFF (Spring Boot 3)]
    ↔ HttpSession（Spring Session/Redis：Authorized Client（IdP AT/RT））
    ↔ 端末セッション情報（Redis：sid/ver/lastSeen）
@@ -38,7 +38,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 ## 5. トークン設計
 ### 5.1 自前 Access Token（AT）
 - 形式：JWT（HS256）
-- 保存：Cookie `AT`
+- 保存：Cookie `access_token`
 - 有効期間：10分
 - クレーム：`sub, exp, sid, ver`（最小構成）
 
@@ -72,12 +72,12 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 ## 7. Cookie
 | 名称 | 内容 | 属性 |
 |---|---|---|
-| `AT` | 自前アクセスJWT | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
+| `access_token` | 自前アクセスJWT | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
 | `JSESSIONID` | サーバセッション | `HttpOnly; Secure` |
 | `XSRF-TOKEN` | CSRF トークン | `Secure; SameSite=Lax; Path=/` |
-| `UI` | UI 表示用ヒント（Base64URL JSON・非署名） | `Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
+| `user_info` | UI 表示用ヒント（Base64URL JSON・非署名） | `Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
 
-UI ヒント例：`uid, name, avatar, loc, rolesHint`
+UI ヒント例：`uid`（将来の拡張は別途定義）
 
 注記：`Secure` は本番で有効（HTTPS）。`local` プロファイルでは `Secure=false` で配布。
 
@@ -89,13 +89,13 @@ UI ヒント例：`uid, name, avatar, loc, rolesHint`
 - **リフレッシュ**：`POST /api/auth/refresh`
   - 受信：CSRF ヘッダ
   - 処理：
-    1) HttpSession から `sid/ver/uid/displayName`（と `principalName`）を取得
-    2) Redis の `sess:{sid}.ver` と HttpSession の `ver` を照合（不一致なら 401・`AT/UI` クリア）
+    1) HttpSession から `sid/ver/uid`（と `principalName`）を取得
+    2) Redis の `sess:{sid}.ver` と HttpSession の `ver` を照合（不一致なら 401・`access_token/user_info` クリア）
     3) IdP 生存確認（`AuthorizedClientManager.authorize(principal)`）
-    4) 成功時に新 AT 発行と `UI` 更新（署名なし）
+    4) 成功時に新 access_token 発行と `user_info` 更新（署名なし）
   - 応答：`204 No Content`
 - **ログアウト**：`POST /api/auth/logout`
-  - 処理：`ver++`、`AT/UI` 削除
+  - 処理：`ver++`、`access_token/user_info` 削除
   - 応答：`204 No Content`
 - **UI 情報**：`GET /api/me`
 - **CSRF 取得**：`GET /api/csrf`（`XSRF-TOKEN` を Cookie で返却）
@@ -106,12 +106,12 @@ UI ヒント例：`uid, name, avatar, loc, rolesHint`
 ### 9.1 ログイン
 1) `/oauth2/authorization/{registrationId}` へ遷移  
 2) 認証成功後、`sid, ver=1, lastSeen` を生成し Redis 保存  
-3) AT を発行し Cookie 設定、`UI` を発行（署名なし）  
+3) access_token を発行し Cookie 設定、`user_info` を発行（署名なし）  
 4) アプリへリダイレクト
 
 ### 9.2 API 呼び出し
-1) Browser が `AT` を送信  
-2) BFF が AT 署名・標準クレーム検証、Redis の `ver` と照合  
+1) Browser が `access_token` を送信  
+2) BFF が access_token 署名・標準クレーム検証、Redis の `ver` と照合  
 3) 認証成功後、`lastSeen` を更新
 
 ### 9.3 リフレッシュ
@@ -128,19 +128,19 @@ UI ヒント例：`uid, name, avatar, loc, rolesHint`
 ## 10. タイムアウト・TTL
 - AT：10分
 - **無操作タイムアウト**：120分（`lastSeen + 120分` で判定）
-  - 120分超の最初の API で `ver++` と `AT/UI` クリア→401。直後の `/api/auth/refresh` も `ver` 不一致のため 401（再ログインを要求）。
+  - 120分超の最初の API で `ver++` と `access_token/user_info` クリア→401。直後の `/api/auth/refresh` も `ver` 不一致のため 401（再ログインを要求）。
 
 ---
 
 ## 11. エラーレスポンス
 | 事象 | ステータス | サーバ動作 |
 |---|---:|---|
-| JWT 無効（署名/exp） | 401 | `AT/UI` 削除（sid 不明のため `ver++` なし） |
-| ver 不一致 | 401 | `ver++`、`AT/UI` 削除 |
+| JWT 無効（署名/exp） | 401 | `access_token/user_info` 削除（sid 不明のため `ver++` なし） |
+| ver 不一致 | 401 | `ver++`、`access_token/user_info` 削除 |
 | 無操作 120 分超 | 401 | `ver++`、Cookie 削除 |
-| `/api/auth/refresh`：`ver` 不一致 | 401 | `AT/UI` 削除（再ログインを要求） |
-| `/api/auth/refresh`：IdP 生存 NG | 401 | `AT/UI` 削除 |
-| `/api/auth/refresh`：成功 | 204 | 新 `AT` と `UI` を Set-Cookie |
+| `/api/auth/refresh`：`ver` 不一致 | 401 | `access_token/user_info` 削除（再ログインを要求） |
+| `/api/auth/refresh`：IdP 生存 NG | 401 | `access_token/user_info` 削除 |
+| `/api/auth/refresh`：成功 | 204 | 新 `access_token` と `user_info` を Set-Cookie |
 
 ---
 

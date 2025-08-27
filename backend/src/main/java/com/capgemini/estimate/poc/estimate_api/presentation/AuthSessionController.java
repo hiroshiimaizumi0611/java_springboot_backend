@@ -10,8 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -28,7 +26,6 @@ public class AuthSessionController {
   private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
   private final RedisUtil redisUtil;
-  private final Environment environment;
   private final AuthRefreshService authRefreshService;
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
@@ -37,24 +34,19 @@ public class AuthSessionController {
       JwtUtil jwtUtil,
       CookieUtil cookieUtil,
       RedisUtil redisUtil,
-      Environment environment,
       AuthRefreshService authRefreshService) {
     this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
-    this.environment = environment;
     this.authRefreshService = authRefreshService;
-  }
-
-  private boolean isSecureCookies() {
-    return !environment.acceptsProfiles(Profiles.of("local"));
   }
 
   @PostMapping("/auth/logout")
   public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-    boolean secure = isSecureCookies();
-    String at = getCookie(request, "AT");
+    boolean secure = cookieUtil.isSecureCookie();
+    String at = getCookie(request, "access_token");
     String sid = null;
+
     try {
       if (at != null) {
         Map<String, Object> c = jwtUtil.parseClaims(at);
@@ -64,68 +56,80 @@ public class AuthSessionController {
     if (sid != null) {
       redisUtil.incrementVer(sid);
     }
+
     cookieUtil.clearAuthCookies(response, secure);
     cookieUtil.clearUiCookies(response, secure);
+    
     return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/auth/refresh")
   public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
       throws Exception {
-    // サービスは検証のみ。HTTP 応答と Cookie はコントローラで組み立てる
     boolean ok = authRefreshService.canRefresh(request, response);
-    boolean secure = isSecureCookies();
+    boolean secure = cookieUtil.isSecureCookie();
+
     if (!ok) {
       cookieUtil.clearAuthCookies(response, secure);
       cookieUtil.clearUiCookies(response, secure);
       return ResponseEntity.status(401).build();
     }
 
-    // 前提OKなので、新しい AT/UI を発行
+    // 新しい access_token/user_info を発行
     var httpSession = request.getSession(false);
+
     if (httpSession == null) {
       cookieUtil.clearAuthCookies(response, secure);
       cookieUtil.clearUiCookies(response, secure);
       return ResponseEntity.status(401).build();
     }
+
     String sid = (String) httpSession.getAttribute("sid");
     Long ver = (Long) httpSession.getAttribute("ver");
     String uid = (String) httpSession.getAttribute("uid");
-    String displayName = (String) httpSession.getAttribute("displayName");
     String principalName = (String) httpSession.getAttribute("principalName");
+
     if (sid == null || ver == null) {
       cookieUtil.clearAuthCookies(response, secure);
       cookieUtil.clearUiCookies(response, secure);
       return ResponseEntity.status(401).build();
     }
+
     String subject = (uid != null) ? uid : (principalName != null ? principalName : sid);
     long ttlSeconds = atTtlMinutes * 60L;
     String newAt = jwtUtil.createAccessToken(subject, sid, ver, ttlSeconds);
+
     cookieUtil.setAuthCookies(response, newAt, Duration.ofSeconds(ttlSeconds), secure);
-    cookieUtil.setUiCookie(response, subject, displayName, secure, Duration.ofSeconds(ttlSeconds));
+    cookieUtil.setUiCookie(response, subject, secure, Duration.ofSeconds(ttlSeconds));
     return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/me")
   public Map<String, Object> me(Authentication authentication) {
     Map<String, Object> body = new HashMap<>();
+
     body.put("name", authentication != null ? authentication.getName() : null);
     body.put("roles", new String[] {});
+
     return body;
   }
 
   @GetMapping("/csrf")
   public Map<String, String> csrf(CsrfToken token) {
     Map<String, String> body = new HashMap<>();
+
     body.put("headerName", token.getHeaderName());
     body.put("parameterName", token.getParameterName());
     body.put("token", token.getToken());
+
     return body;
   }
 
   private String getCookie(HttpServletRequest request, String name) {
     Cookie[] cookies = request.getCookies();
-    if (cookies == null) return null;
+
+    if (cookies == null) {return null;}
+
     for (Cookie c : cookies) {
       if (name.equals(c.getName())) return c.getValue();
     }

@@ -3,7 +3,6 @@ package com.capgemini.estimate.poc.estimate_api.auth;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthRefreshService {
 
-  private final JwtUtil jwtUtil;
   private final RedisUtil redisUtil;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
 
@@ -28,10 +26,8 @@ public class AuthRefreshService {
   private long atTtlMinutes;
 
   public AuthRefreshService(
-      JwtUtil jwtUtil,
       RedisUtil redisUtil,
       OAuth2AuthorizedClientManager authorizedClientManager) {
-    this.jwtUtil = jwtUtil;
     this.redisUtil = redisUtil;
     this.authorizedClientManager = authorizedClientManager;
   }
@@ -92,9 +88,8 @@ public class AuthRefreshService {
       return null;
     }
     String uid = (String) session.getAttribute("uid");
-    String displayName = (String) session.getAttribute("displayName");
     String principalName = (String) session.getAttribute("principalName");
-    return new SessionData(sid, ver, uid, displayName, principalName);
+    return new SessionData(sid, ver, uid, principalName);
   }
 
   /**
@@ -118,5 +113,5 @@ public class AuthRefreshService {
   }
 
   private static record SessionData(
-      String sid, Long ver, String uid, String displayName, String principalName) {}
+      String sid, Long ver, String uid, String principalName) {}
 }
