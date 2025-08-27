@@ -4,28 +4,22 @@ import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.AuthRefreshService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -35,8 +29,9 @@ public class AuthSessionController {
   private final CookieUtil cookieUtil;
   private final RedisUtil redisUtil;
   private final Environment environment;
-  private final ObjectMapper objectMapper = new ObjectMapper();
   private final AuthRefreshService authRefreshService;
+  @Value("${app.jwt.at-ttl-minutes:10}")
+  private long atTtlMinutes;
 
   public AuthSessionController(
       JwtUtil jwtUtil,
@@ -77,8 +72,38 @@ public class AuthSessionController {
   @PostMapping("/auth/refresh")
   public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
       throws Exception {
-    // FAT になりがちなリフレッシュ処理はサービス層へ委譲
-    return authRefreshService.refresh(request, response);
+    // サービスは検証のみ。HTTP 応答と Cookie はコントローラで組み立てる
+    boolean ok = authRefreshService.canRefresh(request, response);
+    boolean secure = isSecureCookies();
+    if (!ok) {
+      cookieUtil.clearAuthCookies(response, secure);
+      cookieUtil.clearUiCookies(response, secure);
+      return ResponseEntity.status(401).build();
+    }
+
+    // 前提OKなので、新しい AT/UI を発行
+    var httpSession = request.getSession(false);
+    if (httpSession == null) {
+      cookieUtil.clearAuthCookies(response, secure);
+      cookieUtil.clearUiCookies(response, secure);
+      return ResponseEntity.status(401).build();
+    }
+    String sid = (String) httpSession.getAttribute("sid");
+    Long ver = (Long) httpSession.getAttribute("ver");
+    String uid = (String) httpSession.getAttribute("uid");
+    String displayName = (String) httpSession.getAttribute("displayName");
+    String principalName = (String) httpSession.getAttribute("principalName");
+    if (sid == null || ver == null) {
+      cookieUtil.clearAuthCookies(response, secure);
+      cookieUtil.clearUiCookies(response, secure);
+      return ResponseEntity.status(401).build();
+    }
+    String subject = (uid != null) ? uid : (principalName != null ? principalName : sid);
+    long ttlSeconds = atTtlMinutes * 60L;
+    String newAt = jwtUtil.createAccessToken(subject, sid, ver, ttlSeconds);
+    cookieUtil.setAuthCookies(response, newAt, Duration.ofSeconds(ttlSeconds), secure);
+    cookieUtil.setUiCookie(response, subject, displayName, secure, Duration.ofSeconds(ttlSeconds));
+    return ResponseEntity.noContent().build();
   }
 
   @GetMapping("/me")

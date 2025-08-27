@@ -6,9 +6,6 @@ import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,10 +19,7 @@ import org.springframework.stereotype.Service;
 public class AuthRefreshService {
 
   private final JwtUtil jwtUtil;
-  private final CookieUtil cookieUtil;
-  
   private final RedisUtil redisUtil;
-  private final Environment environment;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
 
   @Value("${app.idp.registration-id:cognito}")
@@ -35,80 +29,45 @@ public class AuthRefreshService {
 
   public AuthRefreshService(
       JwtUtil jwtUtil,
-      CookieUtil cookieUtil,
       RedisUtil redisUtil,
-      Environment environment,
       OAuth2AuthorizedClientManager authorizedClientManager) {
     this.jwtUtil = jwtUtil;
-    this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
-    this.environment = environment;
     this.authorizedClientManager = authorizedClientManager;
   }
 
-  private boolean isSecureCookies() {
-    return !environment.acceptsProfiles(Profiles.of("local"));
-  }
-
   /**
-   * AT を再発行し、UI Cookie を更新する。
+   * リフレッシュの前提条件（HttpSession, Redis ver, IdP AuthorizedClient）を検証する。
+   * Cookie や HTTP ステータスの制御は行わない。
    *
-   * @param request HttpServletRequest
-   * @param response HttpServletResponse
-   * @return 204: 再発行成功、401: 再ログインが必要
-   * @throws Exception 変換エラーなど
+   * @return 全てOKなら true、NG なら false
    */
-  public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
-      throws Exception {
+  public boolean canRefresh(HttpServletRequest request, HttpServletResponse response) {
     HttpSession httpSession = request.getSession(false);
     if (httpSession == null) {
-      return unauthorizedAndClearCookies(response);
-    }
-    String sid = (String) httpSession.getAttribute("sid");
-    Long ver = (Long) httpSession.getAttribute("ver");
-    if (sid == null || ver == null) {
-      return unauthorizedAndClearCookies(response);
+      return false;
     }
 
-    // Redis 側の ver と HttpSession 側の ver が一致しない場合は、アイドル超過等で失効済みと判断して 401 を返す
-    Long redisVer = redisUtil.getVer(sid);
-    if (redisVer == null || redisVer.longValue() != ver.longValue()) {
-      return unauthorizedAndClearCookies(response);
+    SessionData session = extractSessionData(httpSession);
+    if (session == null) {
+      return false;
     }
 
-    // AuthorizedClientRepository は principal.name をキーに HttpSession から取得するため、
-    // ログイン時に保存した principalName を最優先、次に uid を使用する
+    // Redis の ver と一致しなければ失効と見なし 401
+    Long redisVer = redisUtil.getVer(session.sid());
+    if (redisVer == null || redisVer.longValue() != session.ver().longValue()) {
+      return false;
+    }
+
+    // Authorized Client の生存確認（必要に応じて RT で更新）
     String principalName = resolvePrincipalName(httpSession);
     Authentication principal = new UsernamePasswordAuthenticationToken(principalName, null, List.of());
-
-    OAuth2AuthorizeRequest authRequest =
-        OAuth2AuthorizeRequest.withClientRegistrationId(idpRegistrationId)
-            .principal(principal)
-            .attribute(HttpServletRequest.class.getName(), request)
-            .attribute(HttpServletResponse.class.getName(), response)
-            .build();
-
-    OAuth2AuthorizedClient authorizedClient = null;
-    try {
-      authorizedClient = authorizedClientManager.authorize(authRequest);
-    } catch (OAuth2AuthorizationException ex) {
-      // fallthrough to 401
-    }
+    OAuth2AuthorizedClient authorizedClient = authorizeIdpClient(request, response, principal);
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
-      return unauthorizedAndClearCookies(response);
+      return false;
     }
 
-    String uid = (String) httpSession.getAttribute("uid");
-    String displayName = (String) httpSession.getAttribute("displayName");
-    String subject =
-        uid != null ? uid : ((principal != null && principal.getName() != null) ? principal.getName() : sid);
-    long ttlSeconds = atTtlMinutes * 60;
-    String newAt = jwtUtil.createAccessToken(subject, sid, ver, ttlSeconds);
-    boolean secure = isSecureCookies();
-    cookieUtil.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
-    cookieUtil.setUiCookie(response, subject, displayName, secure, Duration.ofMinutes(atTtlMinutes));
-
-    return ResponseEntity.noContent().build();
+    return true;
   }
 
 
@@ -122,11 +81,42 @@ public class AuthRefreshService {
     return principalName;
   }
 
-  private ResponseEntity<Void> unauthorizedAndClearCookies(HttpServletResponse response) {
-    boolean secure = isSecureCookies();
-    cookieUtil.clearAuthCookies(response, secure);
-    cookieUtil.clearUiCookies(response, secure);
-    return ResponseEntity.status(401).build();
+  // HTTP レスポンスの生成や Cookie の設定はコントローラ層で行う
+  /**
+   * HttpSession から認証に必要な情報を抽出。sid/ver 欠如時は null。
+   */
+  private SessionData extractSessionData(HttpSession session) {
+    String sid = (String) session.getAttribute("sid");
+    Long ver = (Long) session.getAttribute("ver");
+    if (sid == null || ver == null) {
+      return null;
+    }
+    String uid = (String) session.getAttribute("uid");
+    String displayName = (String) session.getAttribute("displayName");
+    String principalName = (String) session.getAttribute("principalName");
+    return new SessionData(sid, ver, uid, displayName, principalName);
   }
 
+  /**
+   * IdP の Authorized Client を取得（必要に応じて RT 更新）。失敗時は null。
+   */
+  private OAuth2AuthorizedClient authorizeIdpClient(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      Authentication principal) {
+    OAuth2AuthorizeRequest authRequest =
+        OAuth2AuthorizeRequest.withClientRegistrationId(idpRegistrationId)
+            .principal(principal)
+            .attribute(HttpServletRequest.class.getName(), request)
+            .attribute(HttpServletResponse.class.getName(), response)
+            .build();
+    try {
+      return authorizedClientManager.authorize(authRequest);
+    } catch (OAuth2AuthorizationException ex) {
+      return null;
+    }
+  }
+
+  private static record SessionData(
+      String sid, Long ver, String uid, String displayName, String principalName) {}
 }

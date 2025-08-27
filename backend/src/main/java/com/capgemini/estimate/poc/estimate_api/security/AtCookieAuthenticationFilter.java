@@ -19,6 +19,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -62,11 +63,7 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
-    // コンテキストパス配下でも正しく判定できるようにする
-    String uri = request.getRequestURI();
-    String ctx = request.getContextPath();
-    String path = (ctx != null && !ctx.isEmpty() && uri.startsWith(ctx)) ? uri.substring(ctx.length()) : uri;
-    boolean isRefreshPath = "/api/auth/refresh".equals(path) || path.endsWith("/api/auth/refresh");
+    boolean isRefreshPath = new AntPathRequestMatcher("/api/auth/refresh").matches(request);
     String jwt = extractAtFromCookie(request);
     if (jwt != null && SecurityContextHolder.getContext().getAuthentication() == null) {
       try {

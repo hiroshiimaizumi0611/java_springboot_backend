@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -17,16 +16,13 @@ import org.springframework.stereotype.Service;
  * アプリケーション発行の JWT（AT）を扱うユーティリティ。
  * <p>
  * - 署名: HS256（共有シークレット {@code jwt.secret}）。
- * - 主要クレーム: iss, aud(=iss), iat, nbf, exp, jti, sid, ver
+ * - クレーム: sub, exp, sid, ver（最小限）
  */
 @Service
 public class JwtUtil {
 
   @Value("${jwt.secret}")
   private String secret;
-
-  @Value("${spring.application.name:estimate-api}")
-  private String issuer;
 
   /** HS256 の署名鍵を生成する。シークレットは十分な長さ（32バイト以上）を推奨。 */
   private SecretKey key() {
@@ -47,12 +43,7 @@ public class JwtUtil {
     Instant now = Instant.now();
     return Jwts.builder()
         .subject(subject)
-        .issuer(issuer)
-        .audience().add(issuer).and()
-        .issuedAt(Date.from(now))
-        .notBefore(Date.from(now))
         .expiration(Date.from(now.plusSeconds(ttlSeconds)))
-        .id(UUID.randomUUID().toString())
         .claim("sid", sid)
         .claim("ver", sessionVersion)
         .signWith(key(), Jwts.SIG.HS256)

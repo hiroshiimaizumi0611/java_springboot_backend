@@ -40,7 +40,17 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 - 形式：JWT（HS256）
 - 保存：Cookie `AT`
 - 有効期間：10分
-- クレーム：`iss, aud, sub, iat, nbf, exp, jti, sid, ver`
+- クレーム：`sub, exp, sid, ver`（最小構成）
+
+#### 5.1.1 クレーム詳細（AT）
+- sub: サブジェクト（ユーザー識別子）。ログイン時はメール等のユーザーID、リフレッシュ時は `uid` を優先（なければ `principalName`、最終フォールバックで `sid`）。
+- exp: 失効時刻（Epoch秒）。発行時刻＋TTL（初期値10分）。
+- sid: 端末セッションID（UUID）。Redis の `sess:{sid}` と対応付け。
+- ver: セッションバージョン（数値, long）。Redis 側の `ver` と一致する場合のみ有効とみなす（不一致は失効）。
+
+注記
+- 署名アルゴリズムは HS256。共有シークレットは `JWT_SECRET`（32バイト以上推奨）。
+- 検証は「署名/exp」を実施し、運用上は `sid/ver` を Redis と照合する。
 
 ### 5.2 サーバ側（IdPトークン）
 - 保持先：HttpSession（Spring Session により Redis 永続化）
@@ -125,7 +135,7 @@ UI ヒント例：`uid, name, avatar, loc, rolesHint`
 ## 11. エラーレスポンス
 | 事象 | ステータス | サーバ動作 |
 |---|---:|---|
-| JWT 無効（署名/exp/iss/aud） | 401 | `AT/UI` 削除（sid 不明のため `ver++` なし） |
+| JWT 無効（署名/exp） | 401 | `AT/UI` 削除（sid 不明のため `ver++` なし） |
 | ver 不一致 | 401 | `ver++`、`AT/UI` 削除 |
 | 無操作 120 分超 | 401 | `ver++`、Cookie 削除 |
 | `/api/auth/refresh`：`ver` 不一致 | 401 | `AT/UI` 削除（再ログインを要求） |
