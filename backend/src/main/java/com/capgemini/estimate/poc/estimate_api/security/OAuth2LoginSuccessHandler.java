@@ -3,17 +3,12 @@ package com.capgemini.estimate.poc.estimate_api.security;
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -40,7 +35,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   
   private final RedisUtil redisUtil;
   private final Environment environment;
-  private final ObjectMapper objectMapper = new ObjectMapper();
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
 
@@ -90,15 +84,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     // Cookie 配布（prod は Secure=true, local は false）
     boolean secure = isSecureCookies();
     cookieUtil.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
-
-    // UI 表示用ヒント（Base64URL JSON）と署名
-    Map<String, Object> ui = new HashMap<>();
-    ui.put("uid", username);
-    ui.put("name", displayName);
-    ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
-    String payload = Base64.getUrlEncoder().withoutPadding().encodeToString(
-        objectMapper.writeValueAsString(ui).getBytes());
-    cookieUtil.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
+    cookieUtil.setUiCookie(response, username, displayName, secure, Duration.ofMinutes(atTtlMinutes));
 
     // SPA のルートへ返す
     response.sendRedirect("/");

@@ -1,15 +1,10 @@
 package com.capgemini.estimate.poc.estimate_api.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
@@ -19,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +27,6 @@ public class AuthRefreshService {
   private final RedisUtil redisUtil;
   private final Environment environment;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
-  private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Value("${app.idp.registration-id:cognito}")
   private String idpRegistrationId;
@@ -67,31 +62,23 @@ public class AuthRefreshService {
       throws Exception {
     HttpSession httpSession = request.getSession(false);
     if (httpSession == null) {
-      return ResponseEntity.status(401).build();
+      return unauthorizedAndClearCookies(response);
     }
     String sid = (String) httpSession.getAttribute("sid");
     Long ver = (Long) httpSession.getAttribute("ver");
     if (sid == null || ver == null) {
-      return ResponseEntity.status(401).build();
+      return unauthorizedAndClearCookies(response);
     }
 
     // Redis 側の ver と HttpSession 側の ver が一致しない場合は、アイドル超過等で失効済みと判断して 401 を返す
     Long redisVer = redisUtil.getVer(sid);
     if (redisVer == null || redisVer.longValue() != ver.longValue()) {
-      boolean secure = isSecureCookies();
       return unauthorizedAndClearCookies(response);
     }
 
     // AuthorizedClientRepository は principal.name をキーに HttpSession から取得するため、
     // ログイン時に保存した principalName を最優先、次に uid を使用する
-    String principalName = (String) httpSession.getAttribute("principalName");
-    if (principalName == null) {
-      principalName = (String) httpSession.getAttribute("uid");
-    }
-    if (principalName == null && SecurityContextHolder.getContext().getAuthentication() != null) {
-      principalName = SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-    if (principalName == null) principalName = sid;
+    String principalName = resolvePrincipalName(httpSession);
     Authentication principal = new UsernamePasswordAuthenticationToken(principalName, null, List.of());
 
     OAuth2AuthorizeRequest authRequest =
@@ -104,11 +91,10 @@ public class AuthRefreshService {
     OAuth2AuthorizedClient authorizedClient = null;
     try {
       authorizedClient = authorizedClientManager.authorize(authRequest);
-    } catch (org.springframework.security.oauth2.core.OAuth2AuthorizationException ex) {
+    } catch (OAuth2AuthorizationException ex) {
       // fallthrough to 401
     }
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
-      boolean secure = isSecureCookies();
       return unauthorizedAndClearCookies(response);
     }
 
@@ -120,14 +106,7 @@ public class AuthRefreshService {
     String newAt = jwtUtil.createAccessToken(subject, sid, ver, ttlSeconds);
     boolean secure = isSecureCookies();
     cookieUtil.setAuthCookies(response, newAt, Duration.ofMinutes(atTtlMinutes), secure);
-
-    Map<String, Object> ui = new HashMap<>();
-    ui.put("uid", subject);
-    ui.put("name", displayName != null ? displayName : subject);
-    ui.put("exp", Instant.now().plusSeconds(ttlSeconds).getEpochSecond());
-    String payload =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsString(ui).getBytes());
-    cookieUtil.setUiCookies(response, payload, secure, Duration.ofMinutes(atTtlMinutes).toSeconds());
+    cookieUtil.setUiCookie(response, subject, displayName, secure, Duration.ofMinutes(atTtlMinutes));
 
     return ResponseEntity.noContent().build();
   }

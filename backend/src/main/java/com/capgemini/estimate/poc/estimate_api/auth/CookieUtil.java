@@ -1,7 +1,12 @@
 package com.capgemini.estimate.poc.estimate_api.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +18,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CookieUtil {
+
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   /**
    * AT の Set-Cookie をレスポンスに付与する。
@@ -59,30 +66,6 @@ public class CookieUtil {
   }
 
   /**
-   * UI ヒント用 Cookie をレスポンスに付与する。
-   *
-   * @param response HttpServletResponse
-   * @param base64UrlPayload Base64URL エンコード済み JSON（署名なし）
-   * @param secure Secure 属性（prod=true/local=false）
-   * @param maxAgeSeconds Max-Age（秒）
-   */
-  public void setUiCookies(
-      HttpServletResponse response,
-      String base64UrlPayload,
-      boolean secure,
-      long maxAgeSeconds) {
-    ResponseCookie ui =
-        ResponseCookie.from("UI", base64UrlPayload)
-            .httpOnly(false)
-            .secure(secure)
-            .sameSite("Lax")
-            .path("/")
-            .maxAge(maxAgeSeconds)
-            .build();
-    response.addHeader("Set-Cookie", ui.toString());
-  }
-
-  /**
    * UI の削除用 Set-Cookie（Max-Age=0）をレスポンスに付与する。
    *
    * @param response HttpServletResponse
@@ -99,4 +82,43 @@ public class CookieUtil {
             .build();
     response.addHeader("Set-Cookie", ui.toString());
   }
+
+  /**
+   * UI 表示用ヒント（uid/name/exp）を生成し、UI Cookie を設定する。
+   * JSON を Base64URL でエンコードし、max-age は ttl に従う。
+   *
+   * @param response HttpServletResponse
+   * @param uid ユーザーID（必須）
+   * @param displayName 表示名（null 可、null の場合は uid を使用）
+   * @param secure Secure 属性（prod=true/local=false）
+   * @param ttl UI Cookie の存続期間
+   */
+  public void setUiCookie(
+      HttpServletResponse response,
+      String uid,
+      String displayName,
+      boolean secure,
+      Duration ttl) {
+    try {
+      Map<String, Object> ui = new HashMap<>();
+      ui.put("uid", uid);
+      ui.put("name", (displayName != null ? displayName : uid));
+      ui.put("exp", Instant.now().plusSeconds(ttl.toSeconds()).getEpochSecond());
+      String payload = Base64.getUrlEncoder()
+          .withoutPadding()
+          .encodeToString(objectMapper.writeValueAsString(ui).getBytes());
+      ResponseCookie cookie =
+          ResponseCookie.from("UI", payload)
+              .httpOnly(false)
+              .secure(secure)
+              .sameSite("Lax")
+              .path("/")
+              .maxAge(ttl)
+              .build();
+      response.addHeader("Set-Cookie", cookie.toString());
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to build UI cookie payload", e);
+    }
+  }
+
 }
