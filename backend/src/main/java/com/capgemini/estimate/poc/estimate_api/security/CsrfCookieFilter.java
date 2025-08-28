@@ -28,15 +28,12 @@ public class CsrfCookieFilter extends OncePerRequestFilter {
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
     CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-    String incomingToken = request.getHeader("X-XSRF-TOKEN");
-    String outgoingToken = (csrfToken != null) ? csrfToken.getToken() : null;
-
+    if (csrfToken == null) {
+      csrfToken = (CsrfToken) request.getAttribute("_csrf");
+    }
     if (csrfToken != null) {
-        log.debug("{} = Incoming: {}, Outgoing: {}", csrfToken.getHeaderName(), incomingToken, outgoingToken);
-        // Expose the token back to the client if needed
-        response.setHeader("X-XSRF-TOKEN", csrfToken.getToken());
-    } else {
-        log.warn("CSRF Token is null or not present in the request.");
+      // Access getToken() to materialize the deferred token and force repository to save cookie
+      response.setHeader(csrfToken.getHeaderName(), csrfToken.getToken());
     }
     filterChain.doFilter(request, response);
   }

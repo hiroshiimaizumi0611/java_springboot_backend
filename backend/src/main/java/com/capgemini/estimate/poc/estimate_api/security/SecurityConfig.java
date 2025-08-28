@@ -14,12 +14,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.http.HttpStatus;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 
 @Configuration
 @EnableWebSecurity
@@ -27,6 +28,7 @@ public class SecurityConfig {
 
   @Autowired AtCookieAuthenticationFilter atCookieAuthenticationFilter;
   @Autowired OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+  @Autowired Environment environment;
 
   /**
    * API 用のセキュリティチェーン（/api/**）。
@@ -117,7 +119,8 @@ public class SecurityConfig {
         repository.setCookiePath("/");
         repository.setCookieName("XSRF-TOKEN");
         repository.setHeaderName("X-XSRF-TOKEN");
-        repository.setSecure(false); // Set true if your app runs on HTTPS
+        boolean secure = !environment.acceptsProfiles(Profiles.of("local"));
+        repository.setSecure(secure);
         repository.setCookieMaxAge(3600); // 1 hour
         return repository;
     }
