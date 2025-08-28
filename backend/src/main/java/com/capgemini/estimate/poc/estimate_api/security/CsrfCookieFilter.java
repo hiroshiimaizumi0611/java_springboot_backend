@@ -24,6 +24,9 @@ public class CsrfCookieFilter extends OncePerRequestFilter {
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
     CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+    if (token == null) {
+      token = (CsrfToken) request.getAttribute("_csrf");
+    }
     if (token != null) {
       // 遅延トークンを実体化（この呼び出しで Cookie への保存が行われる）
       token.getToken();
@@ -31,4 +34,3 @@ public class CsrfCookieFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 }
-
