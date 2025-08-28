@@ -16,6 +16,7 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.http.HttpStatus;
@@ -46,14 +47,14 @@ public class SecurityConfig {
   @Order(1)
   SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
 
-    var attrHandler = new XorCsrfTokenRequestAttributeHandler();
-    attrHandler.setCsrfRequestAttributeName("_csrf");
+    CsrfTokenRequestAttributeHandler  csrfTokenRequestAttributeHandler  =  new CsrfTokenRequestAttributeHandler (); 
+    csrfTokenRequestAttributeHandler.setCsrfRequestAttributeName( "_csrf" ); 
 
     return http
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
         .csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(attrHandler))
+            .csrfTokenRepository(csrfTokenRepository())
+            .csrfTokenRequestHandler(csrfTokenRequestAttributeHandler))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
@@ -85,13 +86,13 @@ public class SecurityConfig {
   @Order(2)
   SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
 
-    var attrHandler = new XorCsrfTokenRequestAttributeHandler();
-    attrHandler.setCsrfRequestAttributeName("_csrf");
+    CsrfTokenRequestAttributeHandler  csrfTokenRequestAttributeHandler  =  new CsrfTokenRequestAttributeHandler (); 
+    csrfTokenRequestAttributeHandler.setCsrfRequestAttributeName( "_csrf" ); 
 
     return http
         .csrf(csrf -> csrf
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(attrHandler))
+            .csrfTokenRepository(csrfTokenRepository())
+            .csrfTokenRequestHandler(csrfTokenRequestAttributeHandler))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(session -> session.sessionFixation().newSession())
         .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))
@@ -109,4 +110,15 @@ public class SecurityConfig {
       AuthenticationConfiguration authenticationConfiguration) throws Exception {
     return authenticationConfiguration.getAuthenticationManager();
   }
+
+  @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieName("XSRF-TOKEN");
+        repository.setHeaderName("X-XSRF-TOKEN");
+        repository.setSecure(false); // Set true if your app runs on HTTPS
+        repository.setCookieMaxAge(3600); // 1 hour
+        return repository;
+    }
 }

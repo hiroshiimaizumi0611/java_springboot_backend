@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -19,13 +21,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class CsrfCookieFilter extends OncePerRequestFilter {
 
+  private static final Logger log = LoggerFactory.getLogger(CsrfCookieFilter.class);
+
   @Override
   protected void doFilterInternal(
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
-    CsrfToken token = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-    if (token != null) {
-      response.setHeader(token.getHeaderName(), token.getToken());
+    CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+    String incomingToken = request.getHeader("X-XSRF-TOKEN");
+    String outgoingToken = (csrfToken != null) ? csrfToken.getToken() : null;
+
+    if (csrfToken != null) {
+        log.debug("{} = Incoming: {}, Outgoing: {}", csrfToken.getHeaderName(), incomingToken, outgoingToken);
+        // Expose the token back to the client if needed
+        response.setHeader("X-XSRF-TOKEN", csrfToken.getToken());
+    } else {
+        log.warn("CSRF Token is null or not present in the request.");
     }
     filterChain.doFilter(request, response);
   }
