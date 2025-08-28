@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,8 @@ public class SecurityConfig {
    * - セッション: stateless（サーバ側セキュリティコンテキストは保存しない）
    * - 認証: {@link AtCookieAuthenticationFilter} が `access_token` Cookie を検証して認証をセット
    * - CSRF: {@link org.springframework.security.web.csrf.CookieCsrfTokenRepository#withHttpOnlyFalse()} を使用（SPA が JS で `XSRF-TOKEN` を読み取り、XHR にヘッダ付与）
+   *   - CSRF 補助: {@link CsrfCookieFilter} を {@link org.springframework.security.web.csrf.CsrfFilter} の後段に追加し、
+   *     遅延トークンを毎リクエストで実体化して Cookie への保存を確実化（XSRF-TOKEN が消える事象を防止）
    * - 例外: 未認証は 401 を返却（ブラウザリダイレクトはしない）
    * - 許可: `/api/csrf`, `/api/auth/refresh`, `/api/auth/logout` は常に許可
    *   - refresh はフィルタで Cookie をクリアしない特例（リフレッシュ判定に委ねる）
@@ -54,6 +57,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout").permitAll()
             .anyRequest().authenticated())
+        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .addFilterBefore(atCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
@@ -67,6 +71,8 @@ public class SecurityConfig {
    * - ログイン: formLogin は無効化し、OAuth2/OIDC ログインを使用
    * - 成功後: {@link OAuth2LoginSuccessHandler} で端末セッション登録・Cookie 配布・リダイレクト
    * - CSRF: API 同様、{@link org.springframework.security.web.csrf.CookieCsrfTokenRepository#withHttpOnlyFalse()} を使用
+   *   - CSRF 補助: {@link CsrfCookieFilter} を {@link org.springframework.security.web.csrf.CsrfFilter} の後段に追加し、
+   *     遅延トークンの実体化と Cookie 保存を安定化
    * - 許可: `/oauth2/authorization/**`, `/login/oauth2/code/**` は匿名許可
    * - 備考: セッションフィクセーション対策で `sessionFixation().newSession()` を有効化
    */
@@ -85,6 +91,7 @@ public class SecurityConfig {
                 "/oauth2/authorization/**",
                 "/login/oauth2/code/**").permitAll()
             .anyRequest().authenticated())
+        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
         .build();
   }
 
