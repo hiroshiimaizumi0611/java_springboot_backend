@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -44,11 +45,15 @@ public class SecurityConfig {
   @Bean
   @Order(1)
   SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+
+    var attrHandler = new XorCsrfTokenRequestAttributeHandler();
+    attrHandler.setCsrfRequestAttributeName("_csrf");
+
     return http
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+            .csrfTokenRequestHandler(attrHandler))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
@@ -79,10 +84,14 @@ public class SecurityConfig {
   @Bean
   @Order(2)
   SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+
+    var attrHandler = new XorCsrfTokenRequestAttributeHandler();
+    attrHandler.setCsrfRequestAttributeName("_csrf");
+
     return http
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+            .csrfTokenRequestHandler(attrHandler))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(session -> session.sessionFixation().newSession())
         .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))
