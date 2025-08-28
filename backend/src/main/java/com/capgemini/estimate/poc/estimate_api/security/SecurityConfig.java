@@ -11,9 +11,12 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.context.NullSecurityContextRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 @EnableWebSecurity
@@ -22,7 +25,19 @@ public class SecurityConfig {
   @Autowired AtCookieAuthenticationFilter atCookieAuthenticationFilter;
   @Autowired OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
-  /** API 用の stateless セキュリティチェーン（/api/**） */
+  /**
+   * API 用のセキュリティチェーン（/api/**）。
+   * <p>
+   * 特徴:
+   * - 対象: `/api/**` のみ（その他は {@link #webFilterChain(HttpSecurity)} が担当）
+   * - セッション: stateless（サーバ側セキュリティコンテキストは保存しない）
+   * - 認証: {@link AtCookieAuthenticationFilter} が `access_token` Cookie を検証して認証をセット
+   * - CSRF: {@link org.springframework.security.web.csrf.CookieCsrfTokenRepository#withHttpOnlyFalse()} を使用（SPA が JS で `XSRF-TOKEN` を読み取り、XHR にヘッダ付与）
+   * - 例外: 未認証は 401 を返却（ブラウザリダイレクトはしない）
+   * - 許可: `/api/csrf`, `/api/auth/refresh`, `/api/auth/logout` は常に許可
+   *   - refresh はフィルタで Cookie をクリアしない特例（リフレッシュ判定に委ねる）
+   * - 備考: stateless のため {@link org.springframework.security.web.context.NullSecurityContextRepository} を使用し、毎リクエストで検証する
+   */
   @Bean
   @Order(1)
   SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
@@ -30,13 +45,12 @@ public class SecurityConfig {
         .securityMatcher(new AntPathRequestMatcher("/api/**"))
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler()))
+            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .securityContext(sc -> sc.securityContextRepository(new NullSecurityContextRepository()))
         .exceptionHandling(ex -> ex
-            .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(
-                org.springframework.http.HttpStatus.UNAUTHORIZED)))
+            .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout").permitAll()
             .anyRequest().authenticated())
@@ -44,14 +58,25 @@ public class SecurityConfig {
         .build();
   }
 
-  /** Web/OAuth2 用の stateful セキュリティチェーン（/api/** 以外） */
+  /**
+   * Web/OAuth2 用のセキュリティチェーン（/api/** 以外）。
+   * <p>
+   * 特徴:
+   * - 対象: `/api/**` 以外（SPA ルート遷移や OAuth2 ログインフロー）
+   * - セッション: stateful（Spring Security が HttpSession を利用）
+   * - ログイン: formLogin は無効化し、OAuth2/OIDC ログインを使用
+   * - 成功後: {@link OAuth2LoginSuccessHandler} で端末セッション登録・Cookie 配布・リダイレクト
+   * - CSRF: API 同様、{@link org.springframework.security.web.csrf.CookieCsrfTokenRepository#withHttpOnlyFalse()} を使用
+   * - 許可: `/oauth2/authorization/**`, `/login/oauth2/code/**` は匿名許可
+   * - 備考: セッションフィクセーション対策で `sessionFixation().newSession()` を有効化
+   */
   @Bean
   @Order(2)
   SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
     return http
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            .csrfTokenRequestHandler(new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler()))
+            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
         .formLogin(formLogin -> formLogin.disable())
         .sessionManagement(session -> session.sessionFixation().newSession())
         .oauth2Login(oauth -> oauth.successHandler(oAuth2LoginSuccessHandler))
