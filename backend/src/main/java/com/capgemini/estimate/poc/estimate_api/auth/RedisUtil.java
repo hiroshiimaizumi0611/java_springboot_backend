@@ -31,7 +31,7 @@ public class RedisUtil {
    * @param sid 端末セッションID
    * @return Redis キー文字列
    */
-  public String sessionKey(String sid) {
+  private String sessionKey(String sid) {
     return "sess:" + sid;
   }
 
@@ -41,7 +41,7 @@ public class RedisUtil {
    * @param userId ユーザーID
    * @return Redis キー文字列
    */
-  public String userIndexKey(String userId) {
+  private String userIndexKey(String userId) {
     return "user:" + userId + ":sids";
   }
 
@@ -55,9 +55,11 @@ public class RedisUtil {
   public void upsertOnLogin(String userId, String sid, long sessionVersion) {
     String key = sessionKey(sid);
     Map<String, String> values = new HashMap<>();
+
     values.put("userId", userId);
     values.put("ver", String.valueOf(sessionVersion));
     values.put("lastSeen", String.valueOf(Instant.now().getEpochSecond()));
+
     redisTemplate.opsForHash().putAll(key, values);
     redisTemplate.expire(key, SESSION_META_TTL);
     redisTemplate.opsForSet().add(userIndexKey(userId), sid);
@@ -72,7 +74,9 @@ public class RedisUtil {
     String key = sessionKey(sid);
     Object current = redisTemplate.opsForHash().get(key, "ver");
     long nextVersion = (current == null ? 1 : Long.parseLong(current.toString()) + 1);
+
     redisTemplate.opsForHash().put(key, "ver", String.valueOf(nextVersion));
+
     updateLastSeen(sid);
   }
 
@@ -83,6 +87,7 @@ public class RedisUtil {
    */
   public void updateLastSeen(String sid) {
     String key = sessionKey(sid);
+    
     redisTemplate.opsForHash().put(key, "lastSeen", String.valueOf(Instant.now().getEpochSecond()));
     redisTemplate.expire(key, SESSION_META_TTL);
   }
@@ -100,20 +105,27 @@ public class RedisUtil {
     String key = sessionKey(sid);
     Object storedVer = redisTemplate.opsForHash().get(key, "ver");
     Object storedLastSeen = redisTemplate.opsForHash().get(key, "lastSeen");
+
     if (storedVer == null) {
       return false;
     }
+
     boolean versionMatches = String.valueOf(sessionVersion).equals(String.valueOf(storedVer));
+
     if (!versionMatches) {
       return false;
     }
+
     long nowEpoch = Instant.now().getEpochSecond();
     long lastSeenEpoch = (storedLastSeen == null ? nowEpoch : Long.parseLong(storedLastSeen.toString()));
     long idleSeconds = idleTimeoutMinutes * 60;
+
     if (nowEpoch - lastSeenEpoch > idleSeconds) {
       return false;
     }
+
     updateLastSeen(sid);
+
     return true;
   }
 
@@ -126,9 +138,11 @@ public class RedisUtil {
   public Long getVer(String sid) {
     String key = sessionKey(sid);
     Object value = redisTemplate.opsForHash().get(key, "ver");
+
     if (value == null) {
       return null;
     }
+
     try {
       return Long.parseLong(String.valueOf(value));
     } catch (NumberFormatException e) {

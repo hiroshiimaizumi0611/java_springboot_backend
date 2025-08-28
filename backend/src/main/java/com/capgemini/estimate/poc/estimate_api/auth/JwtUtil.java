@@ -41,6 +41,7 @@ public class JwtUtil {
    */
   public String createAccessToken(String subject, String sid, long sessionVersion, long ttlSeconds) {
     Instant now = Instant.now();
+    
     return Jwts.builder()
         .subject(subject)
         .expiration(Date.from(now.plusSeconds(ttlSeconds)))

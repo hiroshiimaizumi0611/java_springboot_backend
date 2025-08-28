@@ -7,7 +7,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizeRequest;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
@@ -15,7 +14,7 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthRefreshService {
+public class TokenRefreshValidator {
 
   private final RedisUtil redisUtil;
   private final OAuth2AuthorizedClientManager authorizedClientManager;
@@ -25,7 +24,7 @@ public class AuthRefreshService {
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
 
-  public AuthRefreshService(
+  public TokenRefreshValidator(
       RedisUtil redisUtil,
       OAuth2AuthorizedClientManager authorizedClientManager) {
     this.redisUtil = redisUtil;
@@ -56,7 +55,10 @@ public class AuthRefreshService {
     }
 
     // Authorized Client の生存確認（必要に応じて RT で更新）
-    String principalName = resolvePrincipalName(httpSession);
+    String principalName = session.principalName();
+    if (principalName == null || principalName.isBlank()) {
+      return false;
+    }
     Authentication principal = new UsernamePasswordAuthenticationToken(principalName, null, List.of());
     OAuth2AuthorizedClient authorizedClient = authorizeIdpClient(request, response, principal);
     if (authorizedClient == null || authorizedClient.getAccessToken() == null) {
@@ -67,17 +69,6 @@ public class AuthRefreshService {
   }
 
 
-  private String resolvePrincipalName(HttpSession httpSession) {
-    String principalName = (String) httpSession.getAttribute("principalName");
-    if (principalName == null) { principalName = (String) httpSession.getAttribute("uid"); }
-    if (principalName == null && SecurityContextHolder.getContext().getAuthentication() != null) {
-      principalName = SecurityContextHolder.getContext().getAuthentication().getName();
-    }
-    if (principalName == null) { principalName = (String) httpSession.getAttribute("sid"); }
-    return principalName;
-  }
-
-  // HTTP レスポンスの生成や Cookie の設定はコントローラ層で行う
   /**
    * HttpSession から認証に必要な情報を抽出。sid/ver 欠如時は null。
    */

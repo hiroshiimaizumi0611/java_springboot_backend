@@ -74,6 +74,7 @@ public class CookieUtil {
             .path("/")
             .maxAge(0)
             .build();
+
     response.addHeader("Set-Cookie", at.toString());
   }
 
@@ -92,6 +93,7 @@ public class CookieUtil {
             .path("/")
             .maxAge(0)
             .build();
+
     response.addHeader("Set-Cookie", ui.toString());
   }
 
@@ -108,9 +110,11 @@ public class CookieUtil {
       Map<String, Object> ui = new HashMap<>();
       ui.put("uid", uid);
       ui.put("exp", Instant.now().plusSeconds(ttl.toSeconds()).getEpochSecond());
+
       String payload = Base64.getUrlEncoder()
           .withoutPadding()
           .encodeToString(objectMapper.writeValueAsString(ui).getBytes());
+
       ResponseCookie cookie =
           ResponseCookie.from("user_info", payload)
               .httpOnly(false)
@@ -119,9 +123,10 @@ public class CookieUtil {
               .path("/")
               .maxAge(ttl)
               .build();
+
       response.addHeader("Set-Cookie", cookie.toString());
     } catch (Exception e) {
-      throw new RuntimeException("Failed to build UI cookie payload", e);
+      throw new RuntimeException("user_infoクッキーのペイロード生成に失敗しました", e);
     }
   }
 

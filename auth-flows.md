@@ -27,7 +27,7 @@
 
 ## AT リフレッシュ
 - Browser → Backend: `POST /api/auth/refresh`（CSRF ヘッダ必須）
-- Controller → `AuthRefreshService.refresh` へ委譲:
+- Controller → `TokenRefreshValidator` に可否判定を委譲:
   - HttpSession（Redis）から `sid/ver/uid` 取得
   - Redis の `sess:{sid}.ver` と HttpSession の `ver` を照合（不一致なら 401・`AT/UI` クリア）
   - 一致時のみ `OAuth2AuthorizedClientManager.authorize(...)` 実行

@@ -3,7 +3,7 @@ package com.capgemini.estimate.poc.estimate_api.presentation;
 import com.capgemini.estimate.poc.estimate_api.auth.CookieUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.RedisUtil;
 import com.capgemini.estimate.poc.estimate_api.auth.JwtUtil;
-import com.capgemini.estimate.poc.estimate_api.auth.AuthRefreshService;
+import com.capgemini.estimate.poc.estimate_api.auth.TokenRefreshValidator;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,7 +26,7 @@ public class AuthSessionController {
   private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
   private final RedisUtil redisUtil;
-  private final AuthRefreshService authRefreshService;
+  private final TokenRefreshValidator tokenRefreshValidator;
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
 
@@ -34,11 +34,11 @@ public class AuthSessionController {
       JwtUtil jwtUtil,
       CookieUtil cookieUtil,
       RedisUtil redisUtil,
-      AuthRefreshService authRefreshService) {
+      TokenRefreshValidator tokenRefreshValidator) {
     this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
-    this.authRefreshService = authRefreshService;
+    this.tokenRefreshValidator = tokenRefreshValidator;
   }
 
   @PostMapping("/auth/logout")
@@ -66,7 +66,7 @@ public class AuthSessionController {
   @PostMapping("/auth/refresh")
   public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
       throws Exception {
-    boolean ok = authRefreshService.canRefresh(request, response);
+    boolean ok = tokenRefreshValidator.canRefresh(request, response);
     boolean secure = cookieUtil.isSecureCookie();
 
     if (!ok) {

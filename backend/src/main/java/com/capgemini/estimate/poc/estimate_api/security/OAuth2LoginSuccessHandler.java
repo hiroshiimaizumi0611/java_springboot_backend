@@ -79,14 +79,15 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   /** OIDC/OAuth2User から username を抽出（preferred_username 前提: なければ getName）。 */
   private String extractUsername(Authentication authentication) {
     if (authentication.getPrincipal() instanceof OAuth2User user) {
-      return nonBlankOrFallback(user.getAttributes().get("preferred_username"), authentication.getName());
+      Object value = user.getAttributes().get("preferred_username");
+      if (value != null) {
+        String text = String.valueOf(value).trim();
+        if (!text.isEmpty()) {
+          return text;
+        }
+      }
     }
     return authentication.getName();
   }
 
-  private String nonBlankOrFallback(Object value, String fallbackValue) {
-    if (value == null) return fallbackValue;
-    String text = String.valueOf(value).trim();
-    return text.isEmpty() ? fallbackValue : text;
-  }
 }
