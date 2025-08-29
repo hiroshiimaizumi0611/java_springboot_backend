@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -29,6 +31,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
   private final JwtUtil jwtUtil;
   private final CookieUtil cookieUtil;
+  private final CsrfTokenRepository csrfTokenRepository;
   
   private final RedisUtil redisUtil;
   @Value("${app.jwt.at-ttl-minutes:10}")
@@ -37,10 +40,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   public OAuth2LoginSuccessHandler(
       JwtUtil jwtUtil,
       CookieUtil cookieUtil,
-      RedisUtil redisUtil) {
+      RedisUtil redisUtil,
+      CsrfTokenRepository csrfTokenRepository) {
     this.jwtUtil = jwtUtil;
     this.cookieUtil = cookieUtil;
     this.redisUtil = redisUtil;
+    this.csrfTokenRepository = csrfTokenRepository;
   }
 
   @Override
@@ -71,6 +76,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     boolean secure = cookieUtil.isSecureCookie();
     cookieUtil.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
     cookieUtil.setUiCookie(response, username, secure, Duration.ofMinutes(atTtlMinutes));
+
+    // CSRF トークンをログイン成功レスポンスで発行（Cookie に保存）
+    CsrfToken token = csrfTokenRepository.generateToken(request);
+    csrfTokenRepository.saveToken(token, request, response);
 
     // SPA のルートへ返す
     response.sendRedirect("/");

@@ -26,7 +26,6 @@ import org.springframework.core.env.Profiles;
 public class SecurityConfig {
 
   @Autowired AtCookieAuthenticationFilter atCookieAuthenticationFilter;
-  @Autowired OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
   @Autowired Environment environment;
 
   /**
@@ -82,7 +81,7 @@ public class SecurityConfig {
    */
   @Bean
   @Order(2)
-  SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain webFilterChain(HttpSecurity http, OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) throws Exception {
 
     CsrfTokenRequestAttributeHandler  csrfTokenRequestAttributeHandler  =  new CsrfTokenRequestAttributeHandler (); 
     csrfTokenRequestAttributeHandler.setCsrfRequestAttributeName( "_csrf" ); 
