@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * - {@code POST /api/auth/logout}: 端末セッションの ver を進め、認証/UI Cookie を削除
  * - {@code POST /api/auth/refresh}: 前提条件を満たす場合に AT と UI Cookie を再発行
- * - {@code GET /api/me}: 現在の認証情報を返却
  * - {@code GET /api/csrf}: CSRF トークン情報を返却（Cookie にも配布）
  */
 @RestController
@@ -123,16 +121,7 @@ public class AuthSessionController {
     return ResponseEntity.noContent().build();
   }
 
-  /** 現在の認証主体の概要情報を返す。 */
-  @GetMapping("/me")
-  public Map<String, Object> me(Authentication authentication) {
-    Map<String, Object> body = new HashMap<>();
-
-    body.put("name", authentication != null ? authentication.getName() : null);
-    body.put("roles", new String[] {});
-
-    return body;
-  }
+  
 
   /**
    * CSRF トークン情報を返す（Cookie での配布と同時）。

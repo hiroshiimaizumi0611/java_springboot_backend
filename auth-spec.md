@@ -19,14 +19,16 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 - IdP トークンの保持・更新：Spring Security OAuth2 Client（`OAuth2AuthorizedClientManager.authorize(...)`）を使用
 - HttpSession は Spring Session により Redis へ保存（Authorized Client を含む）
 - OAuth2 スコープに `offline_access` を付与し、IdP 側で RT 発行を許可（Entra）。開発（Cognito）は `offline_access` を要求せず、アプリクライアント設定で RT 発行を許可（scope は `openid, email, profile`）。
- - CSRF は `CookieCsrfTokenRepository.withHttpOnlyFalse()` により `XSRF-TOKEN` Cookie を配布
+- CSRF：`CookieCsrfTokenRepository.withHttpOnlyFalse()` を `StableCookieCsrfTokenRepository` でラップして使用
+  - `XSRF-TOKEN` を Cookie で配布（HttpOnly=false, SameSite=Lax, Path=/, Secure=prod, Max-Age≒1d）
+  - ログイン成功時に自動発行し Cookie へ保存。必要に応じて `GET /api/csrf` で再取得
 
 ---
 
 ## 4. アーキテクチャ
 ```
 [Browser]
-   ↕ Cookie: access_token, JSESSIONID, user_info
+   ↕ Cookie: access_token, JSESSIONID, user_info, XSRF-TOKEN
 [BFF (Spring Boot 3)]
    ↔ HttpSession（Spring Session/Redis：Authorized Client（IdP AT/RT））
    ↔ 端末セッション情報（Redis：sid/ver/lastSeen）
@@ -74,7 +76,7 @@ React SPA と Spring Boot 3（BFF）で SSO を実現し、サーバ発行の自
 |---|---|---|
 | `access_token` | 自前アクセスJWT | `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
 | `JSESSIONID` | サーバセッション | `HttpOnly; Secure` |
-| `XSRF-TOKEN` | CSRF トークン | `Secure; SameSite=Lax; Path=/` |
+| `XSRF-TOKEN` | CSRF トークン | `HttpOnly=false; Secure; SameSite=Lax; Path=/; Max-Age≈1d` |
 | `user_info` | UI 表示用ヒント（Base64URL JSON・非署名） | `Secure; SameSite=Lax; Path=/; Max-Age≈10m` |
 
 UI ヒント例：`uid`（将来の拡張は別途定義）
@@ -97,8 +99,8 @@ UI ヒント例：`uid`（将来の拡張は別途定義）
 - **ログアウト**：`POST /api/auth/logout`
   - 処理：`ver++`、`access_token/user_info` 削除
   - 応答：`204 No Content`
-- **UI 情報**：`GET /api/me`
-- **CSRF 取得**：`GET /api/csrf`（`XSRF-TOKEN` を Cookie で返却）
+- **UI 情報 API**：なし（UI は `user_info` Cookie を表示に利用。安全性の判断はサーバ応答に従う）
+- **CSRF 取得**：`GET /api/csrf`（`XSRF-TOKEN` を Cookie で返却。ログイン成功時にも自動発行）
 
 ---
 
@@ -107,7 +109,8 @@ UI ヒント例：`uid`（将来の拡張は別途定義）
 1) `/oauth2/authorization/{registrationId}` へ遷移  
 2) 認証成功後、`sid, ver=1, lastSeen` を生成し Redis 保存  
 3) access_token を発行し Cookie 設定、`user_info` を発行（署名なし）  
-4) アプリへリダイレクト
+4) CSRF トークンを生成し `XSRF-TOKEN` Cookie を設定  
+5) アプリへリダイレクト
 
 ### 9.2 API 呼び出し
 1) Browser が `access_token` を送信  
@@ -129,6 +132,7 @@ UI ヒント例：`uid`（将来の拡張は別途定義）
 - AT：10分
 - **無操作タイムアウト**：120分（`lastSeen + 120分` で判定）
   - 120分超の最初の API で `ver++` と `access_token/user_info` クリア→401。直後の `/api/auth/refresh` も `ver` 不一致のため 401（再ログインを要求）。
+ - CSRF（`XSRF-TOKEN`）のTTL：≒1日（Cookie の Max-Age）。失効時は `/api/csrf` で再取得し、以降の state-changing リクエストにヘッダ付与
 
 ---
 

@@ -12,6 +12,7 @@
   - 自前 AT 発行 → `Set-Cookie: access_token`
   - UI クッキー発行（署名なし） → `Set-Cookie: user_info`
   - HttpSession（Spring Session/Redis）へ Authorized Client（IdP AT/RT）と `sid/ver/uid` を保存（principalName も保持）
+  - CSRF トークン発行 → `Set-Cookie: XSRF-TOKEN`（HttpOnly=false, SameSite=Lax, Path=/, Secure=prod, Max-Age≒1d）
   - ルート `/` へリダイレクト
 - Browser: 以後 `access_token` を送信
 
@@ -61,7 +62,10 @@
 - 設定の要点:
   - `spring.session.store-type: redis`（HttpSession を Redis 化）
   - OAuth2 scope に `offline_access`（IdP RT 取得・再認可に必要／Entra）。Cognito（dev）はアプリクライアント設定で RT を許可し、scope は `openid, email, profile`。
-  - CSRF: `CookieCsrfTokenRepository.withHttpOnlyFalse()` を使用（`GET /api/csrf` で UI が取得）
+  - CSRF: `CookieCsrfTokenRepository.withHttpOnlyFalse()` を `StableCookieCsrfTokenRepository` でラップ
+    - ログイン成功時に `XSRF-TOKEN` を自動発行
+    - 取得/再取得は `GET /api/csrf` でも可能（フォールバック）
+    - Cookie 属性: HttpOnly=false, SameSite=Lax, Path=/, Secure=prod, Max-Age≒1d
 
 ---
 
@@ -87,7 +91,7 @@ sequenceDiagram
     SS-->>BE: Auth success
     BE->>RM: Save sess:{sid} (sid, ver, lastSeen, userId)
     BE->>RS: Save AuthorizedClient (IdP AT/RT) + sid/ver/uid
-    BE-->>B: Set-Cookie access_token, user_info; 302 /
+    BE-->>B: Set-Cookie access_token, user_info, XSRF-TOKEN; 302 /
 ```
 
 ### API 呼び出し

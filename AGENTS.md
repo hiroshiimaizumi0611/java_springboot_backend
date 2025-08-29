@@ -42,7 +42,7 @@
 - Cookie属性（prod=HTTPS, local=HTTP）:
   - access_token: HttpOnly; SameSite=Lax; Path=/; Secure=true(prod)/false(local)
   - user_info: 非HttpOnly; SameSite=Lax; Path=/; Max-Age≈10m; Secure=true/false（Base64URL JSON）
-- エンドポイント: `POST /api/auth/refresh`（204/IdP RT により更新）、`POST /api/auth/logout`（204/ver++/Cookie 削除）、`GET /api/me`（UI 情報）、`GET /api/csrf`（CSRF 取得）。
+- エンドポイント: `POST /api/auth/refresh`（204/IdP RT により更新）、`POST /api/auth/logout`（204/ver++/Cookie 削除）、`GET /api/csrf`（CSRF 取得）。
 - 主要環境変数: `SPRING_PROFILES_ACTIVE`、`spring.security.oauth2.client.*`、`JWT_SECRET`、`REDIS_*`。
 - 例
   - ログイン開始: `GET /oauth2/authorization/cognito`（dev）/ `.../azure`（prod）
