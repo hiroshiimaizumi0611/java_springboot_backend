@@ -26,6 +26,14 @@ import org.springframework.stereotype.Component;
  * - UI/UI_SIG を生成して Cookie に設定
  * - 最後に SPA のルートへリダイレクト
  */
+/**
+ * OAuth2/OIDC ログイン成功後の後処理を行うハンドラ。
+ * <p>
+ * - 端末セッション（sid/ver）を生成し Redis に登録
+ * - 自前 AT と UI 用 Cookie を配布
+ * - CSRF トークンを生成し {@code XSRF-TOKEN} Cookie を配布
+ * - 最後に SPA ルートへリダイレクト
+ */
 @Component
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
@@ -37,6 +45,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
 
+  /**
+   * コンストラクタ。
+   *
+   * @param jwtUtil 自前 AT の生成ユーティリティ
+   * @param cookieUtil 認証/UI Cookie の配布ユーティリティ
+   * @param redisUtil 端末セッションメタの登録ユーティリティ
+   * @param csrfTokenRepository CSRF トークンの生成/保存リポジトリ
+   */
   public OAuth2LoginSuccessHandler(
       JwtUtil jwtUtil,
       CookieUtil cookieUtil,
@@ -48,6 +64,9 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     this.csrfTokenRepository = csrfTokenRepository;
   }
 
+  /**
+   * ログイン成功時に Cookie 配布とセッション登録を行い、CSRF トークンも自動発行する。
+   */
   @Override
   public void onAuthenticationSuccess(
       HttpServletRequest request, HttpServletResponse response, Authentication authentication)

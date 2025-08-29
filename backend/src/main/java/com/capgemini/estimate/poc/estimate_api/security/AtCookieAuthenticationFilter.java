@@ -30,6 +30,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * - ver 不一致/タイムアウト時は（refresh を除き）Cookie を削除し ver++
  * - 署名/exp 不正時も（refresh を除き）Cookie を削除
  */
+/**
+ * Cookie の AT（自前 JWT）を検証し、認証済みコンテキストを構築するフィルタ。
+ * <p>
+ * - JWT の署名/exp を検証後、Redis 上の端末セッション（sid/ver/lastSeen）と照合する。
+ * - 無操作タイムアウトや ver 不一致を検知した場合は、refresh パス以外で Cookie を削除して失効させる。
+ */
 @Component
 public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
 
@@ -40,6 +46,13 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
   @Value("${app.session.idle-timeout-minutes:120}")
   private long idleTimeoutMinutes;
 
+  /**
+   * コンストラクタ。
+   *
+   * @param jwtUtil JWT の生成/検証ユーティリティ
+   * @param redisUtil 端末セッション情報の照合/更新ユーティリティ
+   * @param cookieUtil Cookie の配布/削除ユーティリティ
+   */
   public AtCookieAuthenticationFilter(
       JwtUtil jwtUtil,
       RedisUtil redisUtil,
@@ -49,6 +62,12 @@ public class AtCookieAuthenticationFilter extends OncePerRequestFilter {
     this.cookieUtil = cookieUtil;
   }
 
+  /**
+   * リクエスト毎に AT を検証し、認証済みコンテキストを設定する。
+   *
+   * <p>refresh エンドポイント以外で失効を検知した場合は、端末セッション ver を進め、
+   * ブラウザ側の認証系 Cookie を削除する。
+   */
   @Override
   protected void doFilterInternal(
       @NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)

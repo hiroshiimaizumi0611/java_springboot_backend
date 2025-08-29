@@ -19,6 +19,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 認証セッション関連 API のコントローラ。
+ * <p>
+ * - {@code POST /api/auth/logout}: 端末セッションの ver を進め、認証/UI Cookie を削除
+ * - {@code POST /api/auth/refresh}: 前提条件を満たす場合に AT と UI Cookie を再発行
+ * - {@code GET /api/me}: 現在の認証情報を返却
+ * - {@code GET /api/csrf}: CSRF トークン情報を返却（Cookie にも配布）
+ */
 @RestController
 @RequestMapping("/api")
 public class AuthSessionController {
@@ -41,6 +49,11 @@ public class AuthSessionController {
     this.tokenRefreshValidator = tokenRefreshValidator;
   }
 
+  /**
+   * 端末セッションを失効させ、認証/UI Cookie を削除する。
+   *
+   * @return 204 No Content
+   */
   @PostMapping("/auth/logout")
   public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
     boolean secure = cookieUtil.isSecureCookie();
@@ -63,6 +76,12 @@ public class AuthSessionController {
     return ResponseEntity.noContent().build();
   }
 
+  /**
+   * AT と UI Cookie を再発行する。
+   * <p>CSRF ヘッダが必須。前提条件（HttpSession, Redis ver, IdP AuthorizedClient）が満たされない場合は 401。
+   *
+   * @return 成功時 204 No Content、失敗時 401 Unauthorized
+   */
   @PostMapping("/auth/refresh")
   public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response)
       throws Exception {
@@ -104,6 +123,7 @@ public class AuthSessionController {
     return ResponseEntity.noContent().build();
   }
 
+  /** 現在の認証主体の概要情報を返す。 */
   @GetMapping("/me")
   public Map<String, Object> me(Authentication authentication) {
     Map<String, Object> body = new HashMap<>();
@@ -114,6 +134,10 @@ public class AuthSessionController {
     return body;
   }
 
+  /**
+   * CSRF トークン情報を返す（Cookie での配布と同時）。
+   * <p>UI は `headerName`/`token` を参照して XHR にヘッダ付与する。
+   */
   @GetMapping("/csrf")
   public Map<String, String> csrf(CsrfToken token) {
     Map<String, String> body = new HashMap<>();

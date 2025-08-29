@@ -1,0 +1,36 @@
+200 OK GET
+  - Request N 
+  - リクエストURL : https://estimate-app.com/api/estimates/67e7c171-428c-428c-8909-6d6af78f10bb
+  - リクエストメソッド : GET
+  - Cookie: `access_token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzLCJzaWQiOiIxNDdlM2YzNS1iYTA3LTQwMzctOWNjNC03YzY5ZDNiZDg2YTYiLCJ2ZXIiOjF9.qfxTurDpFPSE-NhNhhe4M7Zo2uR_mPmorIbBU5OB6EM; user_info=eyJ1aWQiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzfQ; XSRF-TOKEN=8316ada5-7c39-4f5a-acf2-152dc50fa079; SESSION=NDRhNzZkYmMtZTllYS00OTBjLWI4MmItNWU3NzBjZjJlN2Q5`
+  - Headers: `x-xsrf-token 8316ada5-7c39-4f5a-acf2-152dc50fa079`
+- Response N
+  - Set-Cookie:
+    - `XSRF-TOKEN=8316ada5-7c39-4f5a-acf2-152dc50fa079; Max-Age=3600; Expires=Fri, 29 Aug 2025 02:18:08 GMT; Path=/; Secure`
+    - `XSRF-TOKEN=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:10 GMT; Path=/; Secure`
+    - `SESSION=MTE1ODE5YzQtYTczMy00ZTJjLWI5ODgtM2ZiNjNlNDU4OTNk; Path=/; HttpOnly; SameSite=Lax`
+  - Headers: `x-xsrf-token 8316ada5-7c39-4f5a-acf2-152dc50fa079`
+
+403 Forbidden PUT
+  - Request N 
+  - リクエストURL : https://estimate-app.com/api/estimates/67e7c171-428c-428c-8909-6d6af78f10bb
+  - リクエストメソッド : PUT
+  - Cookie: `access_token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzLCJzaWQiOiIxNDdlM2YzNS1iYTA3LTQwMzctOWNjNC03YzY5ZDNiZDg2YTYiLCJ2ZXIiOjF9.qfxTurDpFPSE-NhNhhe4M7Zo2uR_mPmorIbBU5OB6EM; user_info=eyJ1aWQiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzfQ; SESSION=MTE1ODE5YzQtYTczMy00ZTJjLWI5ODgtM2ZiNjNlNDU4OTNk`
+  - Headers: `x-xsrf-token なし`
+- Response N
+  - Set-Cookie:
+    - `XSRF-TOKEN=517a8403-d3a3-4825-9cbe-8c748e11b1f3; Max-Age=3600; Expires=Fri, 29 Aug 2025 02:18:11 GMT; Path=/; Secure`
+  - Headers: `x-xsrf-token なし`
+
+200 OK PUT
+  - Request N 
+  - リクエストURL : https://estimate-app.com/api/estimates/67e7c171-428c-428c-8909-6d6af78f10bb
+  - リクエストメソッド : PUT
+  - Cookie: `access_token=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzLCJzaWQiOiIxNDdlM2YzNS1iYTA3LTQwMzctOWNjNC03YzY5ZDNiZDg2YTYiLCJ2ZXIiOjF9.qfxTurDpFPSE-NhNhhe4M7Zo2uR_mPmorIbBU5OB6EM; user_info=eyJ1aWQiOiJoaGlpcnJvb3NzaGhpaTA2MTFAZ21haWwuY29tIiwiZXhwIjoxNzU2NDMwMzQzfQ; SESSION=MTE1ODE5YzQtYTczMy00ZTJjLWI5ODgtM2ZiNjNlNDU4OTNk; XSRF-TOKEN=517a8403-d3a3-4825-9cbe-8c748e11b1f3`
+  - Headers: `x-xsrf-token 517a8403-d3a3-4825-9cbe-8c748e11b1f3`
+- Response N
+  - Set-Cookie:
+    - `XSRF-TOKEN=517a8403-d3a3-4825-9cbe-8c748e11b1f3; Max-Age=3600; Expires=Fri, 29 Aug 2025 02:18:13 GMT; Path=/; Secure`
+    - `XSRF-TOKEN=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:10 GMT; Path=/; Secure`
+    - `SESSION=MWExZTRmNmMtZjM2MS00YmIzLTlhMjgtMzA0ZjkxNDA5YTA4; Path=/; HttpOnly; SameSite=Lax`
+  - Headers: `x-xsrf-token なし`

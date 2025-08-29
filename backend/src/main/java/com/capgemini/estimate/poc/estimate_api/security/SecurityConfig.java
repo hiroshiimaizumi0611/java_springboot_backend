@@ -21,6 +21,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 
+/**
+ * Spring Security の全体設定。
+ * <p>
+ * - API 用チェーン（/api/**）は stateless で、Cookie の AT を検証して毎リクエスト認証。
+ * - Web/OAuth2 用チェーン（/api/** 以外）は stateful で、OAuth2 ログイン成功時に Cookie を配布。
+ * - CSRF は {@code CookieCsrfTokenRepository.withHttpOnlyFalse()} を {@link StableCookieCsrfTokenRepository} でラップし、
+ *   ログイン成功時に自動発行・Cookie 配布する。
+ */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -108,6 +116,12 @@ public class SecurityConfig {
   }
 
   @Bean
+    /**
+     * UI で読み取れる CSRF 用 Cookie リポジトリを構成する。
+     * <p>
+     * `CookieCsrfTokenRepository.withHttpOnlyFalse()` をベースに、Path/Name/Header/SameSite/Secure/Max-Age を設定し、
+     * `StableCookieCsrfTokenRepository` でラップして saveToken(null, ...) 時の Cookie 削除を抑止する。
+     */
     public CsrfTokenRepository csrfTokenRepository() {
         CookieCsrfTokenRepository base = CookieCsrfTokenRepository.withHttpOnlyFalse();
         base.setCookiePath("/");

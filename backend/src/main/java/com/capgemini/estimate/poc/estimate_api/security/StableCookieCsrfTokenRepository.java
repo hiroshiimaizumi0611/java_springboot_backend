@@ -24,6 +24,10 @@ public class StableCookieCsrfTokenRepository implements CsrfTokenRepository {
   }
 
   @Override
+  /**
+   * {@inheritDoc}
+   * <p>トークンが {@code null} の場合でも既存 Cookie を削除せず、必要に応じて再保存する。
+   */
   public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
     if (token == null) {
       // 既存のトークンがある場合は維持（削除は行わない）

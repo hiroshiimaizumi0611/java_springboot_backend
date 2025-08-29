@@ -13,6 +13,12 @@ import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.stereotype.Service;
 
+/**
+ * `POST /api/auth/refresh` を実行可能かを判定するバリデータ。
+ * <p>
+ * HttpSession（Spring Session/Redis）に保持される Authorized Client の生存確認と、
+ * 端末セッション（Redis 上の `sess:{sid}`）に保存された ver の一致を確認する。
+ */
 @Service
 public class TokenRefreshValidator {
 
@@ -24,6 +30,12 @@ public class TokenRefreshValidator {
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
 
+  /**
+   * コンストラクタ。
+   *
+   * @param redisUtil 端末セッションメタの参照ユーティリティ
+   * @param authorizedClientManager OAuth2 クライアントの認可/更新マネージャ
+   */
   public TokenRefreshValidator(
       RedisUtil redisUtil,
       OAuth2AuthorizedClientManager authorizedClientManager) {
