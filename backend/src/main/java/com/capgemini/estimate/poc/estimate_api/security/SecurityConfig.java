@@ -117,7 +117,7 @@ public class SecurityConfig {
         base.setCookieCustomizer(cookie -> cookie
             .secure(secure)
             .sameSite("Lax")
-            .maxAge(java.time.Duration.ofSeconds(3600))
+            .maxAge(java.time.Duration.ofDays(1))
         );
 
         return new StableCookieCsrfTokenRepository(base);
