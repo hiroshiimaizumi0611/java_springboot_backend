@@ -115,13 +115,16 @@ public class SecurityConfig {
 
   @Bean
     public CsrfTokenRepository csrfTokenRepository() {
-        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        repository.setCookiePath("/");
-        repository.setCookieName("XSRF-TOKEN");
-        repository.setHeaderName("X-XSRF-TOKEN");
+        CookieCsrfTokenRepository base = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        base.setCookiePath("/");
+        base.setCookieName("XSRF-TOKEN");
+        base.setHeaderName("X-XSRF-TOKEN");
         boolean secure = !environment.acceptsProfiles(Profiles.of("local"));
-        repository.setSecure(secure);
-        repository.setCookieMaxAge(3600); // 1 hour
-        return repository;
+        base.setSecure(secure);
+        base.setCookieMaxAge(3600); // 1 hour
+
+        StableCookieCsrfTokenRepository stable = new StableCookieCsrfTokenRepository(base);
+        // もし将来プロパティを上書きしたい場合は stable の setter でも設定可能
+        return stable;
     }
 }
