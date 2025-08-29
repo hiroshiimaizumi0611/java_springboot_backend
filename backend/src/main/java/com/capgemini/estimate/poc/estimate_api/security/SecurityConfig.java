@@ -65,7 +65,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout").permitAll()
             .anyRequest().authenticated())
-        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+        .addFilterAfter(new CsrfCookieFilter(csrfTokenRepository()), CsrfFilter.class)
         .addFilterBefore(atCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }
@@ -103,7 +103,7 @@ public class SecurityConfig {
                 "/oauth2/authorization/**",
                 "/login/oauth2/code/**").permitAll()
             .anyRequest().authenticated())
-        .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+        .addFilterAfter(new CsrfCookieFilter(csrfTokenRepository()), CsrfFilter.class)
         .build();
   }
 

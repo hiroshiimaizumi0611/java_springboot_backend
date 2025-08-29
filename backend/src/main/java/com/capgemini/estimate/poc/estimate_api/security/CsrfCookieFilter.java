@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -22,6 +23,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class CsrfCookieFilter extends OncePerRequestFilter {
 
   private static final Logger log = LoggerFactory.getLogger(CsrfCookieFilter.class);
+  private final CsrfTokenRepository csrfTokenRepository;
+
+  public CsrfCookieFilter(CsrfTokenRepository csrfTokenRepository) {
+    this.csrfTokenRepository = csrfTokenRepository;
+  }
 
   @Override
   protected void doFilterInternal(
@@ -31,9 +37,23 @@ public class CsrfCookieFilter extends OncePerRequestFilter {
     if (csrfToken == null) {
       csrfToken = (CsrfToken) request.getAttribute("_csrf");
     }
-    if (csrfToken != null) {
-      // Access getToken() to materialize the deferred token and force repository to save cookie
-      response.setHeader(csrfToken.getHeaderName(), csrfToken.getToken());
+
+    if (csrfToken != null && csrfToken.getToken() != null) {
+      // 遅延生成トークンを必ず実体化し、誤って削除されないよう明示的にCookieへ保存する
+      String tokenValue = csrfToken.getToken();
+      response.setHeader(csrfToken.getHeaderName(), tokenValue);
+      try {
+        csrfTokenRepository.saveToken(csrfToken, request, response);
+      } catch (Exception ignored) {}
+    } else {
+      // リクエスト属性が無い場合は、リポジトリから既存トークンを読み出し、再保存してCookieの揺れを防ぐ
+      CsrfToken existing = csrfTokenRepository.loadToken(request);
+      if (existing != null && existing.getToken() != null) {
+        response.setHeader(existing.getHeaderName(), existing.getToken());
+        try {
+          csrfTokenRepository.saveToken(existing, request, response);
+        } catch (Exception ignored) {}
+      }
     }
     filterChain.doFilter(request, response);
   }
