@@ -4,4 +4,4 @@ env:
 
 # Override image tag for prod deploys
 image:
-  tag: f7fc73c
+  tag: 94142ef
