@@ -41,7 +41,7 @@ probes:
     failureThreshold: 3
     initialDelaySeconds: 0
   startup:
-    enabled: false
+    enabled: true
     path: /actuator/health
     periodSeconds: 10
     timeoutSeconds: 3
