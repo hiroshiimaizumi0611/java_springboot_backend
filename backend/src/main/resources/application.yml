@@ -4,6 +4,7 @@ server:
         whitelabel:
             enabled: false
     forward-headers-strategy: framework
+    shutdown: graceful
 
 spring:
     application:
@@ -14,6 +15,8 @@ spring:
             # Use a constant hash-tagged namespace so Redis Cluster keeps session keys in the same slot
             # to avoid CROSSSLOT on RENAME during session id changes.
             namespace: spring:session:{backend}
+    lifecycle:
+        timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
     datasource:
         url: jdbc:oracle:thin:@//${DB_HOST}:${DB_PORT}/${DB_NAME}
         username: ${DB_USERNAME}
@@ -29,6 +32,25 @@ spring:
             password: ${REDIS_PASSWORD}
             ssl: 
                 enabled: ${REDIS_SSL_ENABLED}
+    task:
+        execution:
+            shutdown:
+                await-termination: true
+                await-termination-period: ${TASK_EXEC_SHUTDOWN:30s}
+        scheduling:
+            shutdown:
+                await-termination: true
+                await-termination-period: ${TASK_SCHED_SHUTDOWN:30s}
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info
+    endpoint:
+        health:
+            probes:
+                enabled: true
 
 jwt:
   secret: ${JWT_SECRET}

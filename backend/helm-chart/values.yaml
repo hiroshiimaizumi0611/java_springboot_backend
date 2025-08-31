@@ -13,3 +13,37 @@ service:
 # Override per environment: e.g. --set env.SPRING_PROFILES_ACTIVE=prod
 env:
   SPRING_PROFILES_ACTIVE: prod
+
+# Rolling update strategy
+strategy:
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Termination and lifecycle (graceful shutdown)
+terminationGracePeriodSeconds: 50
+lifecycle:
+  preStopSleepSeconds: 10
+
+# Probes configuration
+probes:
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+    successThreshold: 1
+    initialDelaySeconds: 0
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+    initialDelaySeconds: 0
+  startup:
+    enabled: false
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 12
+    initialDelaySeconds: 0

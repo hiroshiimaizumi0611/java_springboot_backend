@@ -104,7 +104,9 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(
                 "/oauth2/authorization/**",
-                "/login/oauth2/code/**").permitAll()
+                "/login/oauth2/code/**",
+                "/actuator/health",
+                "/actuator/health/**").permitAll()
             .anyRequest().authenticated())
         .build();
   }

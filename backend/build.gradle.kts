@@ -19,6 +19,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.seasar.doma.boot:doma-spring-boot-starter:1.6.0")
     implementation("org.seasar.doma:doma-core:3.8.0")
     annotationProcessor("org.seasar.doma:doma-processor:3.8.0")
