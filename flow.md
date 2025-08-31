@@ -5,29 +5,29 @@
 ### 認証フロー
 
 ① [React SPA] → ユーザーがアクセス（例：/home）  
-　　└─ 認証されていないため、Azure AD SSOへリダイレクト
+　　└─ 認証されていないため、OAuth2開始エンドポイントへリダイレクト（例：GET /oauth2/authorization/azure）
 
 ② → [Azure AD SSO画面]  
 　　└─ ユーザーが認証（ID/PW or MFAなど）
 
-③ → Azureが認証成功 → [Spring Boot: /api/auth/callback] にリダイレクト  
-　　└─ 認証コードが付与される
+③ → Azureが認証成功 → [Spring Security: /login/oauth2/code/{registrationId}] にリダイレクト  
+　　└─ 認可コードが付与される
 
 ④ → Spring Bootが以下を実行：  
-　　├─ 認証コードを使って Azure にトークンリクエスト  
-　　├─ Azureから アクセストークン + リフレッシュトークン を取得  
-　　├─ アクセストークンの `sub` を抽出（ユーザー識別に使用）  
-　　├─ `sub` を使って業務ロジックでユーザー情報を取得  
-　　├─ Spring Bootが独自のJWT（アクセストークン）を発行（subおよびver、ユーザー情報含む）  
-　　├─ Azureから取得したRTおよびverをそのままRedisにTTL期限付きで保存（キー: sub）  
-　　├─ JWTをHttpOnly Cookieにセット（Secure, SameSiteなど）  
-　　├─ JSからアクセス可能な情報（例：ユーザー名、部署名など）を 別Cookie(HttpOnly=false) にセット
+　　├─ 認可コードを使って Azure にトークンリクエスト  
+　　├─ Azureから アクセストークン + リフレッシュトークン を取得（Authorized Client として HttpSession に保存。ストアは Spring Session → Redis）  
+　　├─ ユーザー識別子（例：preferred_username など）を抽出  
+　　├─ Spring Boot が独自のJWT（アクセストークン: HS256, クレーム=sub/sid/ver/exp）を発行  
+　　├─ 端末セッションメタ（sid/ver/lastSeen/userId）を Redis に保存（キー: sess:{sid}、TTLはスライディングで約14日）  
+　　├─ JWTをHttpOnly Cookie `access_token` にセット（Path=/, SameSite=Lax, Secureは本番のみ）  
+　　├─ JSからアクセス可能な情報（例：ユーザー名）を 別Cookie `user_info`(HttpOnly=false, Base64URL JSON) にセット  
+　　├─ CSRFトークンをCookie（XSRF-TOKEN）として発行
 
-⑤ → Spring Bootが [React SPA: /home] にリダイレクト  
+⑤ → Spring Bootが [React SPA: /] にリダイレクト  
 　　└─ CookieにJWTが含まれている状態でSPAが表示される
 
 ⑥ → React SPAがAPIリクエスト（例：GET /api/user/info）を開始  
-　　└─ 以降はJWT認可フローに従って処理される（期限切れ時はRedisのRTとver比較）
+　　└─ 以降はJWT認可フローに従って処理される（AT期限切れ時は `POST /api/auth/refresh` で再発行。CSRFヘッダ必須）
 
 ---
 
@@ -38,29 +38,19 @@
 ② → Spring Boot に到達 → Security Filter Chain が起動
 
 ③ → [JWT認証フィルター]  
-　　├─ CookieからJWT抽出  
-　　├─ JWTの署名・構造を検証 
+　　├─ Cookieから `access_token` を抽出  
+　　├─ JWTの署名・exp を検証  
+　　├─ Redis上の端末セッション（sid/ver/lastSeen）と照合（ver一致・アイドル未超過なら lastSeen を更新） 
 
-　　├─ ✅ JWTが有効 → SecurityContext に Authentication をセット  
+　　├─ ✅ 有効 → SecurityContext に Authentication をセット  
 　　│　　　↓  
 　　│　認可処理へ進む（④へ）  
 　　│  
-　　└─ ⏰ JWTが期限切れ → JWTのクレームから `ver` を取得  
+　　└─ ❌ 無効（署名/exp不正、ver不一致、アイドル超過）  
 　　　　　↓  
-　　　　Redisから該当ユーザーのRT情報を取得（キー: sub）  
+　　　　リクエストが `/api/auth/refresh` の場合：Cookieは削除せず次段へ委譲（コントローラ側で生存確認と再発行）  
 　　　　　↓  
-　　　　Redisに保存されたRTの `ver` と JWTの `ver` を比較  
-　　　　　├─ ✅ 一致 → RTの有効期限もOK  
-　　　　　│　　　↓  
-　　　　　│　新しい `ver` を生成（インクリメント）  
-　　　　　│　RedisのRT情報の `ver` を更新  
-　　　　　│　新しいJWTを発行 → Cookieにセット  
-　　　　　│　　　↓  
-　　　　　│　SecurityContext に Authentication を再セット  
-　　　　　│　　　↓  
-　　　　　│　認可処理へ進む（④へ）  
-　　　　　│  
-　　　　　└─ ❌ 不一致 or RT期限切れ → 認証失敗 → 401 Unauthorized
+　　　　それ以外のAPIの場合：Redisのverをインクリメント（失効）し、認証系Cookieを削除 → 401 Unauthorized
 
 ④ → [AuthorizationFilter]（FilterSecurityInterceptor）  
 　　├─ SecurityContext から Authentication を取得  

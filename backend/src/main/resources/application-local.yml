@@ -18,7 +18,5 @@ spring:
 app:
   idp:
     registration-id: cognito
-  jwt:
-    at-ttl-minutes: 1
   log:
     level: DEBUG

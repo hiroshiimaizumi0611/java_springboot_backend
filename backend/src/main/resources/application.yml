@@ -14,21 +14,6 @@ spring:
             # Use a constant hash-tagged namespace so Redis Cluster keeps session keys in the same slot
             # to avoid CROSSSLOT on RENAME during session id changes.
             namespace: spring:session:{backend}
-    security:
-        oauth2:
-            client:
-                registration:
-                    cognito:
-                        client-id: ${CLIENT_ID}
-                        client-secret: ${CLIENT_SECRET}
-                        scope: openid, email, profile
-                        authorization-grant-type: authorization_code
-                        redirect-uri: ${REDIRECT_URI}
-                        provider: cognito
-                provider:
-                    cognito:
-                        issuerUri: https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_WKRebkGWn
-                        user-name-attribute: email
     datasource:
         url: jdbc:oracle:thin:@//${DB_HOST}:${DB_PORT}/${DB_NAME}
         username: ${DB_USERNAME}
@@ -58,3 +43,5 @@ app:
   csv:
     bucket-name: estimate-app-csv-files
     url-expiry-minutes: 10
+  log:
+    level: INFO
