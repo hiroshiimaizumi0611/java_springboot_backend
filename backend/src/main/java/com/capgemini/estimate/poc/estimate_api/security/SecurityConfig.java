@@ -68,7 +68,7 @@ public class SecurityConfig {
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout").permitAll()
+            .requestMatchers("/api/csrf", "/api/auth/refresh", "/api/auth/logout", "/api/test/sleep").permitAll()
             .anyRequest().authenticated())
         .addFilterBefore(atCookieAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
