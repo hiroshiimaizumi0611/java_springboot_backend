@@ -43,14 +43,14 @@ class CookieUtilTest {
 
     List<String> headers = response.getHeaders("Set-Cookie");
     assertThat(headers).hasSize(1);
-    String c = headers.get(0);
+    String cookieHeader = headers.get(0);
 
-    assertThat(c).startsWith("access_token=jwt-token");
-    assertThat(c).contains("Max-Age=600");
-    assertThat(c).contains("Path=/");
-    assertThat(c).contains("SameSite=Lax");
-    assertThat(c).contains("HttpOnly");
-    assertThat(c).contains("Secure");
+    assertThat(cookieHeader).startsWith("access_token=jwt-token");
+    assertThat(cookieHeader).contains("Max-Age=600");
+    assertThat(cookieHeader).contains("Path=/");
+    assertThat(cookieHeader).contains("SameSite=Lax");
+    assertThat(cookieHeader).contains("HttpOnly");
+    assertThat(cookieHeader).contains("Secure");
   }
 
   /** access_token の Set-Cookie が想定どおり（Secure=false）。 */
@@ -64,14 +64,14 @@ class CookieUtilTest {
 
     List<String> headers = response.getHeaders("Set-Cookie");
     assertThat(headers).hasSize(1);
-    String c = headers.get(0);
+    String cookieHeader = headers.get(0);
 
-    assertThat(c).startsWith("access_token=jwt-token");
-    assertThat(c).contains("Max-Age=30");
-    assertThat(c).contains("Path=/");
-    assertThat(c).contains("SameSite=Lax");
-    assertThat(c).contains("HttpOnly");
-    assertThat(c).doesNotContain("Secure");
+    assertThat(cookieHeader).startsWith("access_token=jwt-token");
+    assertThat(cookieHeader).contains("Max-Age=30");
+    assertThat(cookieHeader).contains("Path=/");
+    assertThat(cookieHeader).contains("SameSite=Lax");
+    assertThat(cookieHeader).contains("HttpOnly");
+    assertThat(cookieHeader).doesNotContain("Secure");
   }
 
   /** access_token 削除（Max-Age=0）。 */
@@ -84,14 +84,14 @@ class CookieUtilTest {
 
     List<String> headers = response.getHeaders("Set-Cookie");
     assertThat(headers).hasSize(1);
-    String c = headers.get(0);
+    String cookieHeader = headers.get(0);
 
-    assertThat(c).startsWith("access_token=");
-    assertThat(c).contains("Max-Age=0");
-    assertThat(c).contains("Path=/");
-    assertThat(c).contains("SameSite=Lax");
-    assertThat(c).contains("HttpOnly");
-    assertThat(c).contains("Secure");
+    assertThat(cookieHeader).startsWith("access_token=");
+    assertThat(cookieHeader).contains("Max-Age=0");
+    assertThat(cookieHeader).contains("Path=/");
+    assertThat(cookieHeader).contains("SameSite=Lax");
+    assertThat(cookieHeader).contains("HttpOnly");
+    assertThat(cookieHeader).contains("Secure");
   }
 
   /** user_info 削除（Max-Age=0, HttpOnlyなし）。 */
@@ -104,14 +104,14 @@ class CookieUtilTest {
 
     List<String> headers = response.getHeaders("Set-Cookie");
     assertThat(headers).hasSize(1);
-    String c = headers.get(0);
+    String cookieHeader = headers.get(0);
 
-    assertThat(c).startsWith("user_info=");
-    assertThat(c).contains("Max-Age=0");
-    assertThat(c).contains("Path=/");
-    assertThat(c).contains("SameSite=Lax");
-    assertThat(c).doesNotContain("HttpOnly");
-    assertThat(c).doesNotContain("Secure");
+    assertThat(cookieHeader).startsWith("user_info=");
+    assertThat(cookieHeader).contains("Max-Age=0");
+    assertThat(cookieHeader).contains("Path=/");
+    assertThat(cookieHeader).contains("SameSite=Lax");
+    assertThat(cookieHeader).doesNotContain("HttpOnly");
+    assertThat(cookieHeader).doesNotContain("Secure");
   }
 
   /** user_info の Set-Cookie（属性と値の存在のみ簡潔に確認）。 */
@@ -127,17 +127,17 @@ class CookieUtilTest {
 
     List<String> headers = response.getHeaders("Set-Cookie");
     assertThat(headers).hasSize(1);
-    String c = headers.get(0);
+    String cookieHeader = headers.get(0);
 
     // 属性検証（Max-Age は ttl 秒、Lax、Path=/、HttpOnlyなし、Secureあり）
-    assertThat(c).startsWith("user_info=");
-    assertThat(c).contains("Max-Age=" + ttl.toSeconds());
-    assertThat(c).contains("Path=/");
-    assertThat(c).contains("SameSite=Lax");
-    assertThat(c).doesNotContain("HttpOnly");
-    assertThat(c).contains("Secure");
+    assertThat(cookieHeader).startsWith("user_info=");
+    assertThat(cookieHeader).contains("Max-Age=" + ttl.toSeconds());
+    assertThat(cookieHeader).contains("Path=/");
+    assertThat(cookieHeader).contains("SameSite=Lax");
+    assertThat(cookieHeader).doesNotContain("HttpOnly");
+    assertThat(cookieHeader).contains("Secure");
 
-    String value = c.substring("user_info=".length(), c.indexOf(';'));
+    String value = cookieHeader.substring("user_info=".length(), cookieHeader.indexOf(';'));
     assertThat(value).isNotBlank();
   }
 }
