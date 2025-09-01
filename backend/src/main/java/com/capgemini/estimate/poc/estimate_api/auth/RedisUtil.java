@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
  * <p>
  * キー構造:
  * - 端末セッション情報: {@code sess:{sid}}（Hash）
- * - ユーザー索引: {@code user:{userId}:sids}（Set）
  * 有効期限（TTL）は最終アクセスから14日（スライディング）。
  */
 @Service
@@ -36,16 +35,6 @@ public class RedisUtil {
   }
 
   /**
-   * ユーザー索引キー（user:{userId}:sids）を返す。
-   *
-   * @param userId ユーザーID
-   * @return Redis キー文字列
-   */
-  private String userIndexKey(String userId) {
-    return "user:" + userId + ":sids";
-  }
-
-  /**
    * ログイン時に端末セッション情報を作成（または更新）する。
    *
    * @param userId ユーザーID
@@ -62,7 +51,6 @@ public class RedisUtil {
 
     redisTemplate.opsForHash().putAll(key, values);
     redisTemplate.expire(key, SESSION_META_TTL);
-    redisTemplate.opsForSet().add(userIndexKey(userId), sid);
   }
 
   /**
