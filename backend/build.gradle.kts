@@ -3,6 +3,7 @@ plugins {
     id("org.springframework.boot") version "3.4.5"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.domaframework.doma.compile") version "4.0.0"
+    jacoco
 }
 
 group = "com.capgemini.estimate.poc"
@@ -45,3 +46,27 @@ dependencies {
 tasks.withType<Test> { 
     useJUnitPlatform()
 }
+
+// JaCoCo (test coverage)
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+}
+
+// Optionally fail build on low coverage: uncomment and adjust thresholds
+// tasks.jacocoTestCoverageVerification {
+//     violationRules {
+//         rule {
+//             limit { minimum = "0.50".toBigDecimal() } // 50% line coverage
+//         }
+//     }
+// }
+// tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
