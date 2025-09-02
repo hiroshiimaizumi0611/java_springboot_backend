@@ -4,4 +4,4 @@ env:
 
 # Override image tag for dev deploys
 image:
-  tag: 431a6c0
+  tag: 504b340
