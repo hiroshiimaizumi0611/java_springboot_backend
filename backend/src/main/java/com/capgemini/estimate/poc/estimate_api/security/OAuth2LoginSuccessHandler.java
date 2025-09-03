@@ -74,6 +74,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     // IdP のユーザー情報からユーザー識別子と表示名を決定（シンプルな優先順）
     String username = extractUsername(authentication);
 
+    // ここでユーザー/組織/権限のロード・DB更新を呼び出してOK（重い処理はサービス層へ）。
+
     // 端末セッション識別子とセッションバージョン
     String sid = UUID.randomUUID().toString();
     long ver = 1L;
@@ -91,7 +93,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     httpSession.setAttribute("uid", username);
     httpSession.setAttribute("principalName", authentication.getName());
 
-    // Cookie 配布（prod は Secure=true, local は false）
+    // Cookie 配布（user_info は UI 表示用の最小情報のみ）
     boolean secure = cookieUtil.isSecureCookie();
     cookieUtil.setAuthCookies(response, at, Duration.ofMinutes(atTtlMinutes), secure);
     cookieUtil.setUiCookie(response, username, secure, Duration.ofMinutes(atTtlMinutes));
