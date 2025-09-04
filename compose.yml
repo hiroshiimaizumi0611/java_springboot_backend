@@ -33,6 +33,7 @@ services:
       - CLIENT_SECRET=${CLIENT_SECRET}
       - COGNITO_DOMAIN=${COGNITO_DOMAIN}
       - REDIRECT_URI=${REDIRECT_URI}
+      - spring.profiles.active=local
     ports:
       - "8080:8080"
     depends_on:

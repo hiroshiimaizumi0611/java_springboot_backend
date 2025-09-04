@@ -44,6 +44,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
   private final RedisUtil redisUtil;
   @Value("${app.jwt.at-ttl-minutes:10}")
   private long atTtlMinutes;
+  @Value("${app.web.redirect-url:/}")
+  private String loginRedirectUrl;
 
   /**
    * コンストラクタ。
@@ -102,8 +104,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     CsrfToken token = csrfTokenRepository.generateToken(request);
     csrfTokenRepository.saveToken(token, request, response);
 
-    // SPA のルートへ返す
-    response.sendRedirect("/");
+    // SPA へリダイレクト（ローカルは http://localhost:3000/ に固定できるようプロパティ化）
+    response.sendRedirect(loginRedirectUrl);
   }
 
   /** OIDC/OAuth2User から username を抽出（preferred_username 前提: なければ getName）。 */

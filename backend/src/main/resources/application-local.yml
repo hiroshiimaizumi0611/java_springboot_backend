@@ -4,15 +4,15 @@ spring:
       client:
         registration:
           cognito:
-            client-id: ${CLIENT_ID}
+            client-id: 5hgev7kivbq1r6f7ful5gq26q0
             client-secret: ${CLIENT_SECRET}
             scope: openid, email, profile
             authorization-grant-type: authorization_code
-            redirect-uri: ${REDIRECT_URI}
+            redirect-uri: http://localhost:3000/login/oauth2/code/cognito
             provider: cognito
         provider:
           cognito:
-            issuer-uri: https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_WKRebkGWn
+            issuer-uri: https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_1Rq65xaNJ
             user-name-attribute: email
 
 app:
@@ -20,3 +20,5 @@ app:
     registration-id: cognito
   log:
     level: DEBUG
+  web:
+    redirect-url: http://localhost:3000/

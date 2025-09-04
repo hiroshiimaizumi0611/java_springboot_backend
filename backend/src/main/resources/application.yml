@@ -67,3 +67,5 @@ app:
     url-expiry-minutes: 10
   log:
     level: INFO
+  web:
+    redirect-url: /
